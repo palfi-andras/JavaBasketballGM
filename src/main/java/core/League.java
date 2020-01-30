@@ -1,26 +1,18 @@
 package core;
 
-import com.oracle.javafx.jmx.json.JSONException;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 
 import java.io.BufferedReader;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.FileReader;
-import java.io.FileWriter;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
-import java.util.TreeMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class League extends AbstractEntity {
@@ -44,6 +36,12 @@ public class League extends AbstractEntity {
         initialize();
     }
 
+    private League(int id, String name) {
+        super(id);
+        setID(id);
+        setEntityName(name);
+    }
+
     private static AtomicInteger getIdCreator() {
         return idCreator;
     }
@@ -55,23 +53,24 @@ public class League extends AbstractEntity {
         return instance;
     }
 
-    public void save() {
-        String fileName = "./resources/" + getName() + ".json";
-        try (FileWriter file = new FileWriter(fileName)) {
-            file.write(getJSONString());
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+    public static League getInstance(AbstractEntity previous) {
+        if (instance == null)
+            instance = new League(previous.getID(), previous.getName());
+        return instance;
     }
 
-    public void load(String fileName) {
-        try (FileReader reader = new FileReader(fileName)) {
-            JSONParser parser = new JSONParser();
-            JSONObject league = (JSONObject) parser.parse(reader);
-            //this.setID();
-        } catch (IOException | ParseException e) {
-            e.printStackTrace();
+    static League loadLeagueFromJSON(JSONObject json) throws Utils.LeagueLoadException {
+        League league = League.getInstance(AbstractEntity.loadEntityFromJSON(json));
+        if (!json.containsKey("teams"))
+            throw new Utils.LeagueLoadException("teams", json);
+        JSONArray teams = (JSONArray) json.get("teams");
+        for (Object team : teams) {
+            Team t = Team.loadTeamFromJSON((JSONObject) team);
+            league.addEntity(t);
+            for (Player p : t.getRoster())
+                league.addEntity(p);
         }
+        return league;
     }
 
     private void setFirstNames(List<String> firstNames) {
@@ -121,7 +120,9 @@ public class League extends AbstractEntity {
         return entities;
     }
 
-    private boolean entityExists(AbstractEntity entity) { return getEntities().contains(entity); }
+    private boolean entityExists(AbstractEntity entity) {
+        return getEntities().contains(entity);
+    }
 
     private void addEntity(AbstractEntity entity) {
         assert !entityExists(entity);
@@ -143,7 +144,7 @@ public class League extends AbstractEntity {
         for (AbstractEntity entity : getEntities()) {
             if (entity instanceof Player) {
                 ((Player) entity).setEntityName(getRandomFirstName(), getRandomLastName());
-            } else if (entity instanceof  Team) {
+            } else if (entity instanceof Team) {
                 entity.setEntityName(getRandomCity());
             } else {
                 throw new IllegalStateException("Unrecognized entity type");
@@ -179,7 +180,6 @@ public class League extends AbstractEntity {
             for (int t : teamIndexes) {
                 Player p = (Player) getEntities().get(sortedPlayerIndexes.remove(0));
                 Team team = (Team) getEntities().get(t);
-                System.out.println(team.toString() + "\n has drafted: " + p.toString());
                 ((Team) getEntities().get(t)).addPlayerToRoster(p);
             }
         }
@@ -213,7 +213,7 @@ public class League extends AbstractEntity {
     private List<Integer> getTeamEntityIndexes() {
         List<Integer> indexes = new LinkedList<>();
         for (int i = 0; i <= getEntities().size() - 1; i++)
-            if (getEntities().get(i) instanceof  Team)
+            if (getEntities().get(i) instanceof Team)
                 indexes.add(i);
         return indexes;
     }
@@ -221,7 +221,7 @@ public class League extends AbstractEntity {
     private List<Integer> getPlayerEntityIndexes() {
         List<Integer> indexes = new LinkedList<>();
         for (int i = 0; i <= getEntities().size() - 1; i++)
-            if (getEntities().get(i) instanceof  Player)
+            if (getEntities().get(i) instanceof Player)
                 indexes.add(i);
         return indexes;
     }
@@ -266,7 +266,7 @@ public class League extends AbstractEntity {
         return values;
     }
 
-    public JSONObject getJSONObject(){
+    public JSONObject getJSONObject() {
         JSONObject json = super.getJSONObject();
         JSONArray teams = new JSONArray();
         for (int t : getTeamEntityIndexes())
@@ -279,12 +279,25 @@ public class League extends AbstractEntity {
         return getJSONObject().toString();
     }
 
-    private int getNextUniqueKey() { return getIdCreator().incrementAndGet(); }
-    private int getRandomInteger(int bound) { return getRandomInstance().nextInt(bound);}
-    private double getRandomDouble() { return getRandomDouble(0, 1);}
-    private double getRandomDouble(int low, int high) { return low + (high - low) * getRandomInstance().nextDouble();}
+    private int getNextUniqueKey() {
+        return getIdCreator().incrementAndGet();
+    }
 
+    private int getRandomInteger(int bound) {
+        return getRandomInstance().nextInt(bound);
+    }
 
+    private double getRandomDouble() {
+        return getRandomDouble(0.4, 1);
+    }
+
+    private double getRandomDouble(int low, int high) {
+        return low + (high - low) * getRandomInstance().nextDouble();
+    }
+
+    private double getRandomDouble(double low, double high) {
+        return low + (high - low) * getRandomInstance().nextDouble();
+    }
 
 
 }

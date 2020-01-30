@@ -1,10 +1,7 @@
 package core;
 
-import com.oracle.javafx.jmx.json.JSONException;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import org.json.simple.parser.ParseException;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -15,6 +12,11 @@ public class Team extends AbstractEntity {
 
     Team(int id) {
         super(id);
+    }
+
+    Team(AbstractEntity previous) {
+        super(previous.getID(), previous.getName());
+        setEntityAttributes(previous.getEntityAttributes());
     }
 
     static String getPathToCitiesCSV() {
@@ -49,6 +51,24 @@ public class Team extends AbstractEntity {
 
     String getJSONString() {
         return getJSONObject().toString();
+    }
+
+    static Team loadTeamFromJSON(JSONObject json) throws Utils.LeagueLoadException {
+        Team entity = new Team(AbstractEntity.loadEntityFromJSON(json));
+        for (TeamAttributes attr : TeamAttributes.values()) {
+            if (!json.containsKey(attr.toString())) {
+                throw new Utils.LeagueLoadException(attr.toString(), json);
+            } else {
+                entity.setEntityAttribute(attr.toString(), (double) json.get(attr.toString()));
+            }
+        }
+        if (!json.containsKey("players"))
+            throw new Utils.LeagueLoadException("players", json);
+        JSONArray players = (JSONArray) json.get("players");
+        for (Object player : players) {
+            entity.addPlayerToRoster(Player.loadPlayerFromJSON((JSONObject) player));
+        }
+        return entity;
     }
 
     @Override

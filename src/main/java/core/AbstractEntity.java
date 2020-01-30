@@ -1,19 +1,25 @@
 package core;
 
-import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
+import static java.lang.Math.toIntExact;
+
 public class AbstractEntity implements Entity {
     private String entityName;
     private int id;
     private Map<String, Double> entityAttributes = new HashMap<>();
 
-    public AbstractEntity(int id) {
+    AbstractEntity(int id) {
         setID(id);
+    }
+
+    AbstractEntity(int id, String name) {
+        setID(id);
+        setEntityName(name);
     }
 
     @Override
@@ -74,6 +80,14 @@ public class AbstractEntity implements Entity {
 
     String getJSONString() {
         return getJSONObject().toJSONString();
+    }
+
+    static AbstractEntity loadEntityFromJSON(JSONObject json) throws Utils.LeagueLoadException {
+        if (!json.containsKey("name"))
+            throw new Utils.LeagueLoadException("name", json);
+        if (!json.containsKey("id"))
+            throw new Utils.LeagueLoadException("id", json);
+        return new AbstractEntity(toIntExact((Long) json.get("id")), (String) json.get("name"));
     }
 
     @Override

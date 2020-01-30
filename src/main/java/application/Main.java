@@ -1,7 +1,8 @@
 package application;
 
-import core.AbstractEntity;
+
 import core.League;
+import core.Utils;
 
 //public class Main extends Application {
 public class Main {
@@ -15,7 +16,8 @@ public class Main {
 
 
     public static void main(String[] args) {
-       // launch(args);
-        League.getInstance().save();
+        // launch(args);
+        League l = Utils.loadLeague("./resources/league1.json");
+        System.out.println();
     }
 }

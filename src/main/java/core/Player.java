@@ -3,11 +3,6 @@ package core;
 
 import org.json.simple.JSONObject;
 
-import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-
 public class Player extends AbstractEntity {
 
     private static final String pathToFirstNameCSV = "./resources/first-names.csv";
@@ -15,6 +10,11 @@ public class Player extends AbstractEntity {
 
     Player(int id) {
         super(id);
+    }
+
+    Player(AbstractEntity previous) {
+        super(previous.getID(), previous.getName());
+        setEntityAttributes(previous.getEntityAttributes());
     }
 
     static String getPathToFirstNameCSV() {
@@ -44,8 +44,19 @@ public class Player extends AbstractEntity {
         return getJSONObject().toString();
     }
 
+    static Player loadPlayerFromJSON(JSONObject json) throws Utils.LeagueLoadException {
+        Player entity = new Player(AbstractEntity.loadEntityFromJSON(json));
+        for (PlayerAttributes attr : PlayerAttributes.values())
+            if (!json.containsKey(attr.toString())) {
+                throw new Utils.LeagueLoadException(attr.toString(), json);
+            } else {
+                entity.setEntityAttribute(attr.toString(), (double) json.get(attr.toString()));
+            }
+        return entity;
+    }
+
     @Override
     public String toString() {
-        return "Player Name: " + getName() + "\nPlayer Overall Rating: " + getOverallPlayerRating() + "\n" +  super.toString();
+        return "Player Name: " + getName() + "\nPlayer Overall Rating: " + getOverallPlayerRating() + "\n" + super.toString();
     }
 }
