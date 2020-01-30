@@ -14,7 +14,7 @@ public class Team extends AbstractEntity {
         super(id);
     }
 
-    Team(AbstractEntity previous) {
+    private Team(AbstractEntity previous) {
         super(previous.getID(), previous.getName());
         setEntityAttributes(previous.getEntityAttributes());
     }
@@ -38,6 +38,13 @@ public class Team extends AbstractEntity {
 
     int getRosterSize() {
         return getRoster().size();
+    }
+
+    public double getOverallTeamRating() {
+        double sum = 0.0;
+        for (double attrVal : getEntityAttributes().values())
+            sum += attrVal;
+        return sum / getEntityAttributes().size();
     }
 
     JSONObject getJSONObject() {

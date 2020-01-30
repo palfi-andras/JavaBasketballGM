@@ -12,7 +12,7 @@ public class Player extends AbstractEntity {
         super(id);
     }
 
-    Player(AbstractEntity previous) {
+    private Player(AbstractEntity previous) {
         super(previous.getID(), previous.getName());
         setEntityAttributes(previous.getEntityAttributes());
     }

@@ -18,6 +18,5 @@ public class Main {
     public static void main(String[] args) {
         // launch(args);
         League l = Utils.loadLeague("./resources/league1.json");
-        System.out.println();
     }
 }
