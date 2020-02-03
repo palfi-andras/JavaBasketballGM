@@ -1,25 +1,32 @@
 package core;
 
+import gameplay.GameSimulation;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class League extends AbstractEntity {
 
     private static final int NUM_TEAMS = 10;
     private static final int PLAYERS_PER_TEAM = 15;
     private static final int NUM_PLAYERS = (NUM_TEAMS * PLAYERS_PER_TEAM) + 100;
+
+    private static final int NUM_TIMES_TEAMS_PLAY_EACH_OTHER = 6;
+    private static final int NUM_GAMES_PER_TEAM = (NUM_TEAMS - 1) * NUM_TIMES_TEAMS_PLAY_EACH_OTHER;
 
 
     private static League instance = null;
@@ -28,7 +35,9 @@ public class League extends AbstractEntity {
     private List<String> lastNames;
     private List<String> cities;
     private Random randomInstance = new Random(System.currentTimeMillis());
-    private LinkedList<AbstractEntity> entities = new LinkedList<>();
+    private List<AbstractEntity> entities = new LinkedList<>();
+    private List<GameSimulation> games = new LinkedList<>();
+    private List<Team> gameResults = new LinkedList<>();
 
 
     private League(int id) {
@@ -46,6 +55,10 @@ public class League extends AbstractEntity {
         return idCreator;
     }
 
+    public static boolean loaded() {
+        return instance != null;
+    }
+
 
     public static League getInstance() {
         if (instance == null)
@@ -53,9 +66,8 @@ public class League extends AbstractEntity {
         return instance;
     }
 
-    public static League getInstance(AbstractEntity previous) {
-        if (instance == null)
-            instance = new League(previous.getID(), previous.getName());
+    private static League getInstance(AbstractEntity previous) {
+        instance = new League(previous.getID(), previous.getName());
         return instance;
     }
 
@@ -73,36 +85,36 @@ public class League extends AbstractEntity {
         return league;
     }
 
-    private void setFirstNames(List<String> firstNames) {
-        this.firstNames = firstNames;
-    }
-
     List<String> getFirstNames() {
         return firstNames;
+    }
+
+    private void setFirstNames(List<String> firstNames) {
+        this.firstNames = firstNames;
     }
 
     private String getRandomFirstName() {
         return getFirstNames().get(getRandomInteger(getFirstNames().size() - 1));
     }
 
-    private void setLastNames(List<String> lastNames) {
-        this.lastNames = lastNames;
-    }
-
     private List<String> getLastNames() {
         return lastNames;
+    }
+
+    private void setLastNames(List<String> lastNames) {
+        this.lastNames = lastNames;
     }
 
     private String getRandomLastName() {
         return getLastNames().get(getRandomInteger(getLastNames().size() - 1));
     }
 
-    private void setCities(List<String> cities) {
-        this.cities = cities;
-    }
-
     private List<String> getCities() {
         return cities;
+    }
+
+    private void setCities(List<String> cities) {
+        this.cities = cities;
     }
 
     private String getRandomCity() {
@@ -116,8 +128,24 @@ public class League extends AbstractEntity {
         return randomInstance;
     }
 
-    public LinkedList<AbstractEntity> getEntities() {
+    private List<AbstractEntity> getEntities() {
         return entities;
+    }
+
+    private List<GameSimulation> getGames() {
+        return games;
+    }
+
+    private void addGame(GameSimulation game) {
+        getGames().add(game);
+    }
+
+    private List<Team> getGameResults() {
+        return gameResults;
+    }
+
+    private void recordGameResult(Team winner) {
+        getGameResults().add(winner);
     }
 
     private boolean entityExists(AbstractEntity entity) {
@@ -152,10 +180,6 @@ public class League extends AbstractEntity {
         }
         for (int p : getPlayerEntityIndexes())
             initializeAttributes(getEntities().get(p));
-        automatedDraft();
-        for (int t : getTeamEntityIndexes())
-            initializeAttributes(getEntities().get(t));
-
     }
 
     private void initializeAttributes(AbstractEntity entity) {
@@ -172,9 +196,9 @@ public class League extends AbstractEntity {
             }
     }
 
-    private void automatedDraft() {
+    public void automatedDraft() {
         assert getNumPlayers() == NUM_PLAYERS && getNumTeams() == NUM_TEAMS;
-        List<Integer> sortedPlayerIndexes = getRankedPlayerEntityIndexes();
+        List<Integer> sortedPlayerIndexes = new LinkedList<>(getRankedPlayerEntityIndexes());
         List<Integer> teamIndexes = getTeamEntityIndexes();
         while (!draftIsOver()) {
             for (int t : teamIndexes) {
@@ -183,6 +207,8 @@ public class League extends AbstractEntity {
                 ((Team) getEntities().get(t)).addPlayerToRoster(p);
             }
         }
+        for (int t : getTeamEntityIndexes())
+            initializeAttributes(getEntities().get(t));
     }
 
     private boolean draftIsOver() {
@@ -192,6 +218,44 @@ public class League extends AbstractEntity {
                 return false;
         }
         return true;
+    }
+
+    public void setupRoundRobinTournament() {
+        int numDays = (getNumTeams() - 1);
+        List<Integer> teamIndexes = new LinkedList<>(getTeamEntityIndexes());
+        Team team0 = (Team) getEntities().get(teamIndexes.remove(0));
+        for (int day = 0; day < numDays; day++) {
+            int teamIdx = day % teamIndexes.size();
+            Team nextTeam = (Team) getEntities().get(teamIndexes.get(teamIdx));
+            addGame(new GameSimulation(team0, nextTeam));
+            for (int idx = 1; idx < (getNumTeams() / 2); idx++) {
+                int firstTeam = (day + idx) % teamIndexes.size();
+                int secondTeam = (day + teamIndexes.size() - idx) % teamIndexes.size();
+                Team t1 = (Team) getEntities().get(teamIndexes.get(firstTeam));
+                Team t2 = (Team) getEntities().get(teamIndexes.get(secondTeam));
+                addGame(new GameSimulation(t1, t2));
+            }
+        }
+    }
+
+    public void simulateRoundRobinTournament() {
+        if (getGames().size() == 0) {
+            System.out.println("There are no games to play!");
+            return;
+        }
+        for (GameSimulation game : getGames())
+            recordGameResult(game.simulateGame());
+        System.out.println("\n\nRankings: ");
+        Map<Team, Long> results = getGameResults().stream().collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
+        Map<Team, Long> sortedMapReverseOrder = results.entrySet().
+                stream().
+                sorted(Map.Entry.comparingByValue(Comparator.reverseOrder())).
+                collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue, (e1, e2) -> e1, LinkedHashMap::new));
+        int i = 1;
+        for (Map.Entry<Team, Long> entry : sortedMapReverseOrder.entrySet()) {
+            System.out.println(i + ". " + entry.getKey().getName() + "\nWins: " + entry.getValue() + "\n");
+            i++;
+        }
     }
 
     private int getNumTeams() {
@@ -216,6 +280,11 @@ public class League extends AbstractEntity {
             if (getEntities().get(i) instanceof Team)
                 indexes.add(i);
         return indexes;
+    }
+
+    public void printAllTeams() {
+        for (int t : getTeamEntityIndexes())
+            System.out.println((Team) getEntities().get(t));
     }
 
     private List<Integer> getPlayerEntityIndexes() {
@@ -253,7 +322,6 @@ public class League extends AbstractEntity {
     private List<String> getFirstRowFromCSVFile(String path) {
         List<String> values = new LinkedList<>();
         try {
-            System.out.println(new File("").getAbsolutePath());
             BufferedReader csvReader = new BufferedReader(new FileReader(path));
             String row;
             while ((row = csvReader.readLine()) != null) {

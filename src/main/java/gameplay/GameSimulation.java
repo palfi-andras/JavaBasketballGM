@@ -28,6 +28,10 @@ public class GameSimulation {
     }
 
     public Team simulateGame() {
-        return getHomeTeam().getOverallTeamRating() > getAwayTeam().getOverallTeamRating() ? getHomeTeam() : getAwayTeam();
+        Team winningTeam = getHomeTeam().getOverallTeamRating() > getAwayTeam().getOverallTeamRating() ? getHomeTeam()
+                : getAwayTeam();
+        Team losingTeam = getHomeTeam() == winningTeam ? getHomeTeam() : getAwayTeam();
+        System.out.println("Winning Team: " + winningTeam.getName() + " Losing Team: " + losingTeam.getName());
+        return winningTeam;
     }
 }
