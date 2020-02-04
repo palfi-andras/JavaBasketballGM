@@ -6,6 +6,9 @@ import javafx.scene.control.Button;
 import javafx.scene.layout.StackPane;
 import javafx.stage.Stage;
 
+/**
+ * Barebones start to a GUI for the Basketball Simulator.
+ */
 public class JavaBasketballGMGUI extends Application {
 
     public static void main(String[] args) {

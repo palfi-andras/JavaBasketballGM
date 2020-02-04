@@ -6,8 +6,12 @@ import org.json.simple.JSONObject;
 import java.util.LinkedList;
 import java.util.List;
 
+/**
+ * The Team object represents a team of players in the League.
+ */
 public class Team extends AbstractEntity {
     private static final String pathToCitiesCSV = "./resources/us-cities.csv";
+    // Store a list of players on this team
     private List<Player> roster = new LinkedList<>();
 
     Team(int id) {
@@ -23,43 +27,9 @@ public class Team extends AbstractEntity {
         return pathToCitiesCSV;
     }
 
-    List<Player> getRoster() {
-        return roster;
-    }
-
-    void setRoster(List<Player> roster) {
-        this.roster = roster;
-    }
-
-    void addPlayerToRoster(Player p) {
-        assert !getRoster().contains(p);
-        getRoster().add(p);
-    }
-
-    int getRosterSize() {
-        return getRoster().size();
-    }
-
-    public double getOverallTeamRating() {
-        double sum = 0.0;
-        for (double attrVal : getEntityAttributes().values())
-            sum += attrVal;
-        return sum / getEntityAttributes().size();
-    }
-
-    JSONObject getJSONObject() {
-        JSONObject json = super.getJSONObject();
-        JSONArray players = new JSONArray();
-        for (Player p : getRoster())
-            players.add(p.getJSONObject());
-        json.put("players", players);
-        return json;
-    }
-
-    String getJSONString() {
-        return getJSONObject().toString();
-    }
-
+    /**
+     * Loads a team object from a JSON object
+     */
     static Team loadTeamFromJSON(JSONObject json) throws Utils.LeagueLoadException {
         Team entity = new Team(AbstractEntity.loadEntityFromJSON(json));
         for (TeamAttributes attr : TeamAttributes.values()) {
@@ -76,6 +46,55 @@ public class Team extends AbstractEntity {
             entity.addPlayerToRoster(Player.loadPlayerFromJSON((JSONObject) player));
         }
         return entity;
+    }
+
+    List<Player> getRoster() {
+        return roster;
+    }
+
+    void setRoster(List<Player> roster) {
+        this.roster = roster;
+    }
+
+    /**
+     * Adds a new player to this team roster
+     *
+     * @param p Player
+     */
+    void addPlayerToRoster(Player p) {
+        assert !getRoster().contains(p);
+        getRoster().add(p);
+    }
+
+    int getRosterSize() {
+        return getRoster().size();
+    }
+
+    /**
+     * Returns the overall rating of this team which is the average of all of its players overall ratings
+     *
+     * @return
+     */
+    public double getOverallTeamRating() {
+        double sum = 0.0;
+        for (double attrVal : getEntityAttributes().values())
+            sum += attrVal;
+        return sum / getEntityAttributes().size();
+    }
+
+    @Override
+    public JSONObject getJSONObject() {
+        JSONObject json = super.getJSONObject();
+        JSONArray players = new JSONArray();
+        for (Player p : getRoster())
+            players.add(p.getJSONObject());
+        json.put("players", players);
+        return json;
+    }
+
+    @Override
+    public String getJSONString() {
+        return getJSONObject().toString();
     }
 
     @Override

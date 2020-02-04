@@ -30,7 +30,7 @@ public class GameSimulation {
     public Team simulateGame() {
         Team winningTeam = getHomeTeam().getOverallTeamRating() > getAwayTeam().getOverallTeamRating() ? getHomeTeam()
                 : getAwayTeam();
-        Team losingTeam = getHomeTeam() == winningTeam ? getHomeTeam() : getAwayTeam();
+        Team losingTeam = getHomeTeam() == winningTeam ? getAwayTeam() : getHomeTeam();
         System.out.println("Winning Team: " + winningTeam.getName() + " Losing Team: " + losingTeam.getName());
         return winningTeam;
     }

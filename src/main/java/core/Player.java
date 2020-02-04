@@ -3,6 +3,9 @@ package core;
 
 import org.json.simple.JSONObject;
 
+/**
+ * The Player subclass of AbstractEntity represents a basketball player in the League
+ */
 public class Player extends AbstractEntity {
 
     private static final String pathToFirstNameCSV = "./resources/first-names.csv";
@@ -25,25 +28,9 @@ public class Player extends AbstractEntity {
         return pathToLastNameCSV;
     }
 
-    void setEntityName(String firstName, String lastName) {
-        this.setEntityName(String.format("%s %s", firstName, lastName));
-    }
-
-    int getOverallPlayerRating() {
-        double avg = 0.0;
-        for (double attrVal : getEntityAttributes().values())
-            avg += attrVal;
-        return (int) ((avg / getEntityAttributes().size()) * 100);
-    }
-
-    JSONObject getJSONObject() {
-        return super.getJSONObject();
-    }
-
-    String getJSONString() {
-        return getJSONObject().toString();
-    }
-
+    /**
+     * Loads the player from a JSON Object
+     */
     static Player loadPlayerFromJSON(JSONObject json) throws Utils.LeagueLoadException {
         Player entity = new Player(AbstractEntity.loadEntityFromJSON(json));
         for (PlayerAttributes attr : PlayerAttributes.values())
@@ -53,6 +40,30 @@ public class Player extends AbstractEntity {
                 entity.setEntityAttribute(attr.toString(), (double) json.get(attr.toString()));
             }
         return entity;
+    }
+
+    void setEntityName(String firstName, String lastName) {
+        this.setEntityName(String.format("%s %s", firstName, lastName));
+    }
+
+    /**
+     * Returns the over rating of this players, which is the avg of all of its attributes
+     */
+    int getOverallPlayerRating() {
+        double avg = 0.0;
+        for (double attrVal : getEntityAttributes().values())
+            avg += attrVal;
+        return (int) ((avg / getEntityAttributes().size()) * 100);
+    }
+
+    @Override
+    public JSONObject getJSONObject() {
+        return super.getJSONObject();
+    }
+
+    @Override
+    public String getJSONString() {
+        return getJSONObject().toString();
     }
 
     @Override
