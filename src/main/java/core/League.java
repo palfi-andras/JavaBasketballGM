@@ -252,7 +252,7 @@ public class League extends AbstractEntity {
     private void initializeAttributes(AbstractEntity entity) {
         if (entity instanceof Player)
             for (PlayerAttributes attr : PlayerAttributes.values())
-                entity.setEntityAttribute(attr.toString(), getRandomDouble());
+                entity.setEntityAttribute(attr.toString(), Utils.round(getRandomDouble(), 2));
 
         if (entity instanceof Team)
             for (TeamAttributes attr : TeamAttributes.values()) {
@@ -267,7 +267,7 @@ public class League extends AbstractEntity {
      * Performs an automated draft of the league. Each team takes turns drafting players until their roster is filled up.
      */
     public void automatedDraft() {
-        assert getNumPlayers() == NUM_PLAYERS && getNumTeams() == NUM_TEAMS;
+        assert getNumPlayers() == (NUM_PLAYERS - 100) && getNumTeams() == NUM_TEAMS;
         List<Integer> sortedPlayerIndexes = new LinkedList<>(getRankedPlayerEntityIndexes());
         List<Integer> teamIndexes = getTeamEntityIndexes();
         while (!draftIsOver()) {
@@ -454,19 +454,19 @@ public class League extends AbstractEntity {
         return getIdCreator().incrementAndGet();
     }
 
-    private int getRandomInteger(int bound) {
+    public int getRandomInteger(int bound) {
         return getRandomInstance().nextInt(bound);
     }
 
-    private double getRandomDouble() {
+    public double getRandomDouble() {
         return getRandomDouble(0.4, 1);
     }
 
-    private double getRandomDouble(int low, int high) {
+    public double getRandomDouble(int low, int high) {
         return low + (high - low) * getRandomInstance().nextDouble();
     }
 
-    private double getRandomDouble(double low, double high) {
+    public double getRandomDouble(double low, double high) {
         return low + (high - low) * getRandomInstance().nextDouble();
     }
 
