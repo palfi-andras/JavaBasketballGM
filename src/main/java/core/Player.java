@@ -1,6 +1,8 @@
 package core;
 
 
+import gameplay.PlayerStat;
+import gameplay.StatContainer;
 import org.json.simple.JSONObject;
 
 /**
@@ -18,6 +20,7 @@ public class Player extends AbstractEntity {
     private Player(AbstractEntity previous) {
         super(previous.getID(), previous.getName());
         setEntityAttributes(previous.getEntityAttributes());
+        setStatContainer(new StatContainer<PlayerStat, Integer>());
     }
 
     static String getPathToFirstNameCSV() {
@@ -54,6 +57,22 @@ public class Player extends AbstractEntity {
         for (double attrVal : getEntityAttributes().values())
             avg += attrVal;
         return (int) ((avg / getEntityAttributes().size()) * 100);
+    }
+
+    public double getPlayerEnergy() {
+        return getEntityAttribute("ENERGY");
+    }
+
+    public void setPlayerEnergy(double val) {
+        setEntityAttribute("ENERGY", Math.min(val, 1.0));
+    }
+
+    public double getPlayerAttribute(PlayerAttributes attr) {
+        return getEntityAttribute(attr.toString());
+    }
+
+    public int getSumOfPlayerStat(PlayerStat stat) {
+        return (Integer) getStatContainer().getSumOfStatContainer(stat);
     }
 
     @Override

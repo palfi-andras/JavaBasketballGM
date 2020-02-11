@@ -15,4 +15,5 @@ public enum TeamStat {
     TEAM_FREE_THROW_ATTEMPTS,
     TEAM_TOV,
     TEAM_FOULS
+
 }

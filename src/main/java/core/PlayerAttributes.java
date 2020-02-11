@@ -8,10 +8,12 @@ public enum PlayerAttributes {
     MID_SCORING,
     THREE_P_SCORING,
     DUNK,
+    FREE_THROW,
     OFFENSIVE_REBOUND,
     DEFENSIVE_REBOUND,
     INSIDE_DEFENSE,
     PERIMETER_DEFENSE,
     ASSIST,
-    TURNOVER
+    TURNOVER,
+    ENERGY
 }

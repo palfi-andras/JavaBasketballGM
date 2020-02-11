@@ -1,5 +1,7 @@
 package core;
 
+import gameplay.PlayerStat;
+import gameplay.TeamStat;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -9,6 +11,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.HashMap;
+import java.util.Map;
 
 public class Utils {
     /**
@@ -49,6 +53,20 @@ public class Utils {
         BigDecimal bd = BigDecimal.valueOf(value);
         bd = bd.setScale(places, RoundingMode.HALF_UP);
         return bd.doubleValue();
+    }
+
+    public static Map<TeamStat, Integer> createTeamStatIntMap() {
+        Map<TeamStat, Integer> map = new HashMap<>();
+        for (TeamStat stat : TeamStat.values())
+            map.put(stat, 0);
+        return map;
+    }
+
+    public static Map<PlayerStat, Integer> createPlayerStatIntMap() {
+        Map<PlayerStat, Integer> map = new HashMap<>();
+        for (PlayerStat stat : PlayerStat.values())
+            map.put(stat, 0);
+        return map;
     }
 
     // A custom exception to be used when trying to load a previous League from a json file. The most common usages of

@@ -1,5 +1,6 @@
 package core;
 
+import gameplay.StatContainer;
 import org.json.simple.JSONObject;
 
 import java.util.HashMap;
@@ -17,6 +18,7 @@ public class AbstractEntity implements Entity {
     private String entityName;
     private int id;
     private Map<String, Double> entityAttributes = new HashMap<>();
+    private StatContainer statContainer = new StatContainer();
 
     /**
      * Constructors
@@ -133,6 +135,17 @@ public class AbstractEntity implements Entity {
     public String getJSONString() {
         return getJSONObject().toJSONString();
     }
+
+    @Override
+    public StatContainer getStatContainer() {
+        return statContainer;
+    }
+
+    @Override
+    public void setStatContainer(StatContainer statContainer) {
+        this.statContainer = statContainer;
+    }
+
 
     @Override
     public String toString() {

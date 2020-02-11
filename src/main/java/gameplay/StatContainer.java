@@ -15,7 +15,7 @@ public class StatContainer<K, E extends Number & Comparable<E>> {
     private Map<K, E> avgContainer;
     private Map<K, E> maxContainer;
 
-    StatContainer() {
+    public StatContainer() {
         initializeContainers();
     }
 
@@ -38,7 +38,7 @@ public class StatContainer<K, E extends Number & Comparable<E>> {
         this.baseContainer = baseContainer;
     }
 
-    E getSumOfStatContainer(K stat) {
+    public E getSumOfStatContainer(K stat) {
         assert statExists(stat);
         if (getBaseContainer().get(stat).get(0) instanceof Integer) {
             Integer sum = 0;
@@ -68,7 +68,8 @@ public class StatContainer<K, E extends Number & Comparable<E>> {
     }
 
     E getAvgValueOfStat(K stat) {
-        assert statExists(stat);
+        if (!statExists(stat) || statIsEmpty(stat))
+            return (E) (Integer) 0;
         E avg = getAvgContainer().get(stat);
         return (avg instanceof Double) ?
                 (E) (Double) Utils.round((Double) avg, 2) : avg;
@@ -94,6 +95,11 @@ public class StatContainer<K, E extends Number & Comparable<E>> {
 
     boolean statExists(K stat) {
         return getBaseContainer().containsKey(stat);
+    }
+
+    boolean statIsEmpty(K stat) {
+        assert statExists(stat);
+        return getAllValuesOfStat(stat).size() == 0;
     }
 
     public void updateStat(K stat, E newAddition) {

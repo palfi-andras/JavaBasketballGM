@@ -1,5 +1,6 @@
 package core;
 
+import gameplay.StatContainer;
 import org.json.simple.JSONObject;
 
 import java.util.Map;
@@ -33,4 +34,7 @@ public interface Entity {
 
     String getJSONString();
 
+    StatContainer getStatContainer();
+
+    void setStatContainer(StatContainer statContainer);
 }

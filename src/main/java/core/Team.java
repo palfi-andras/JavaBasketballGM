@@ -1,8 +1,12 @@
 package core;
 
+import gameplay.StatContainer;
+import gameplay.TeamStat;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -21,6 +25,7 @@ public class Team extends AbstractEntity {
     private Team(AbstractEntity previous) {
         super(previous.getID(), previous.getName());
         setEntityAttributes(previous.getEntityAttributes());
+        setStatContainer(new StatContainer<TeamStat, Integer>());
     }
 
     static String getPathToCitiesCSV() {
@@ -48,12 +53,19 @@ public class Team extends AbstractEntity {
         return entity;
     }
 
-    List<Player> getRoster() {
+    public List<Player> getRoster() {
         return roster;
     }
 
     void setRoster(List<Player> roster) {
         this.roster = roster;
+    }
+
+    public List<Player> getRankedRoster() {
+        List<Player> rankedRoster = new LinkedList<>(getRoster());
+        rankedRoster.sort(Comparator.comparingInt(Player::getOverallPlayerRating));
+        Collections.reverse(rankedRoster);
+        return rankedRoster;
     }
 
     /**
@@ -80,6 +92,10 @@ public class Team extends AbstractEntity {
         for (double attrVal : getEntityAttributes().values())
             sum += attrVal;
         return sum / getEntityAttributes().size();
+    }
+
+    public int getSumOfTeamStat(TeamStat stat) {
+        return (Integer) getStatContainer().getSumOfStatContainer(stat);
     }
 
     @Override

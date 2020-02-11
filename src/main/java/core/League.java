@@ -1,6 +1,8 @@
 package core;
 
 import gameplay.GameSimulation;
+import gameplay.PlayerStat;
+import gameplay.TeamStat;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
@@ -225,9 +227,9 @@ public class League extends AbstractEntity {
         setLastNames(getFirstRowFromCSVFile(Player.getPathToLastNameCSV()));
         setCities(getFirstRowFromCSVFile(Team.getPathToCitiesCSV()));
         // Create the required amount of teams and players
-        for (int i = 0; i <= NUM_TEAMS; i++)
+        for (int i = 0; i < NUM_TEAMS; i++)
             addEntity(new Team(getNextUniqueKey()));
-        for (int i = 0; i <= NUM_PLAYERS; i++)
+        for (int i = 0; i < NUM_PLAYERS; i++)
             addEntity(new Player(getNextUniqueKey()));
         // Set the names of all of the Entity types
         for (AbstractEntity entity : getEntities()) {
@@ -251,8 +253,13 @@ public class League extends AbstractEntity {
      */
     private void initializeAttributes(AbstractEntity entity) {
         if (entity instanceof Player)
-            for (PlayerAttributes attr : PlayerAttributes.values())
+            for (PlayerAttributes attr : PlayerAttributes.values()) {
+                if (attr == PlayerAttributes.ENERGY) {
+                    entity.setEntityAttribute(attr.toString(), 1.0);
+                    continue;
+                }
                 entity.setEntityAttribute(attr.toString(), Utils.round(getRandomDouble(), 2));
+            }
 
         if (entity instanceof Team)
             for (TeamAttributes attr : TeamAttributes.values()) {
@@ -267,7 +274,7 @@ public class League extends AbstractEntity {
      * Performs an automated draft of the league. Each team takes turns drafting players until their roster is filled up.
      */
     public void automatedDraft() {
-        assert getNumPlayers() == (NUM_PLAYERS - 100) && getNumTeams() == NUM_TEAMS;
+        assert getNumPlayers() == NUM_PLAYERS && getNumTeams() == NUM_TEAMS;
         List<Integer> sortedPlayerIndexes = new LinkedList<>(getRankedPlayerEntityIndexes());
         List<Integer> teamIndexes = getTeamEntityIndexes();
         while (!draftIsOver()) {
@@ -336,6 +343,21 @@ public class League extends AbstractEntity {
             System.out.println(i + ". " + entry.getKey().getName() + "\nWins: " + entry.getValue() + "\n");
             i++;
         }
+    }
+
+    /**
+     * Updates Player and Team StatContainers after a game has ended
+     */
+    private void recordStats(GameSimulation game) {
+        for (Map.Entry<TeamStat, Integer> entry : game.getHomeTeamStats().entrySet())
+            getEntity(game.getHomeTeam().getID()).getStatContainer().updateStat(entry.getKey(), entry.getValue());
+
+        for (Map.Entry<TeamStat, Integer> entry : game.getAwayTeamStats().entrySet())
+            getEntity(game.getAwayTeam().getID()).getStatContainer().updateStat(entry.getKey(), entry.getValue());
+
+        for (Player p : game.getPlayerStats().keySet())
+            for (Map.Entry<PlayerStat, Integer> entry : game.getPlayerStats(p).entrySet())
+                getEntity(p.getID()).getStatContainer().updateStat(entry.getKey(), entry.getValue());
     }
 
     public int getNumTeams() {
@@ -450,7 +472,7 @@ public class League extends AbstractEntity {
         return getJSONObject().toString();
     }
 
-    private int getNextUniqueKey() {
+    public int getNextUniqueKey() {
         return getIdCreator().incrementAndGet();
     }
 
@@ -458,8 +480,12 @@ public class League extends AbstractEntity {
         return getRandomInstance().nextInt(bound);
     }
 
+    public int getRandomInteger(int low, int high) {
+        return (int) getRandomDouble(low, high);
+    }
+
     public double getRandomDouble() {
-        return getRandomDouble(0.4, 1);
+        return getRandomDouble(0.1, 1);
     }
 
     public double getRandomDouble(int low, int high) {

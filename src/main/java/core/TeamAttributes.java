@@ -1,6 +1,6 @@
 package core;
 
-public enum TeamAttributes{
+public enum TeamAttributes {
     HEIGHT,
     STRENGTH,
     SPEED,
@@ -8,6 +8,7 @@ public enum TeamAttributes{
     MID_SCORING,
     THREE_P_SCORING,
     DUNK,
+    FREE_THROW,
     OFFENSIVE_REBOUND,
     DEFENSIVE_REBOUND,
     INSIDE_DEFENSE,
