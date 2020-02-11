@@ -10,8 +10,14 @@ import java.util.Set;
 import static java.lang.Math.toIntExact;
 
 /**
+ * CS -622
+ * AbstractEntity.java
+ * <p>
  * AbstractEntity is the class that implements the base of Entity. Each entity in the league is expected to expand
  * upon the AbstractEntity.
+ *
+ * @author Andras Palfi apalfi@bu.edu
+ * @version 1.0
  */
 public class AbstractEntity implements Entity {
     // Each abstract Entity is required to have a name, id, and a map of attributes

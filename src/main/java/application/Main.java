@@ -10,8 +10,13 @@ import core.Utils;
 import java.io.IOException;
 
 /**
+ * CS-622
+ * Main.java
  * The Main class of the JavaBasketballGM is a controller using the Cliche shell. Each command prefaced here with @Command
  * is a valid command in the program shell
+ *
+ * @author Andras Palfi apalfi@bu.edu
+ * @version 1.0
  */
 public class Main {
 

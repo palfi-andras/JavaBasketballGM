@@ -1,5 +1,13 @@
 package gameplay;
 
+/**
+ * CS-622
+ * TeamStat.java
+ * The Team Stat Enum lists the valid stats that teams may accumulate throughout a game
+ *
+ * @author Andras Palfi apalfi@bu.edu
+ * @version 1.0
+ */
 public enum TeamStat {
     TEAM_PTS,
     TEAM_TWO_POINT_MADE,

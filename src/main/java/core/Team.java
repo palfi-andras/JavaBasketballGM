@@ -11,7 +11,13 @@ import java.util.LinkedList;
 import java.util.List;
 
 /**
+ * CS-622
+ * Team.java
+ * <p>
  * The Team object represents a team of players in the League.
+ *
+ * @author Andras Palfi apalfi@bu.edu
+ * @version 1.0
  */
 public class Team extends AbstractEntity {
     private static final String pathToCitiesCSV = "./resources/us-cities.csv";
@@ -92,6 +98,14 @@ public class Team extends AbstractEntity {
         for (double attrVal : getEntityAttributes().values())
             sum += attrVal;
         return sum / getEntityAttributes().size();
+    }
+
+    /**
+     * Resets each players energy level to 1.0
+     */
+    public void resetEnergyLevels() {
+        for (Player p : getRoster())
+            p.setPlayerEnergy(1.0);
     }
 
     public int getSumOfTeamStat(TeamStat stat) {

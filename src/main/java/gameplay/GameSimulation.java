@@ -13,9 +13,15 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
+ * CS622
+ * GameSimulation.java
+ * <p>
  * The GameSimulation class is tasked with simulating a basketball game between the two teams.
  * <p>
- * The current implementation takes into consideration play-by-play mechanics.
+ * The current implementation takes into consideration play-by-play mechanics with the offense.
+ *
+ * @author Andras Palfi apalfi@bu.edu
+ * @version 1.0
  */
 public class GameSimulation {
     // The amount of fouls a player can get before they foul out of the game
@@ -57,9 +63,15 @@ public class GameSimulation {
 
 
     public GameSimulation(Team home, Team away) {
+        // Set the unique ID of this game
         setId(League.getInstance().getNextUniqueKey());
+        // Reset each teams players energy to 1.0
+        home.resetEnergyLevels();
+        away.resetEnergyLevels();
+        // Mark the home and away teams
         setHomeTeam(home);
         setAwayTeam(away);
+        // Initialize data structures for team stats, player stats and players on court
         setTeamStats(new HashMap<>());
         setPlayerStats(new HashMap<>());
         setPlayersOnCourt(new HashMap<>());
@@ -71,105 +83,227 @@ public class GameSimulation {
         for (Player p : getAwayTeam().getRoster()) {
             getPlayerStats().put(p, Utils.createPlayerStatIntMap());
         }
+        // Place the best 5 players on the court at the start of the game
         setHomePlayersOnCourt(new ArrayList<>(getHomeTeam().getRankedRoster().subList(0, 5)));
         setAwayPlayersOnCourt(new ArrayList<>(getAwayTeam().getRankedRoster().subList(0, 5)));
-
-
     }
 
+    /**
+     * Get the unique identifier for this game
+     *
+     * @return int
+     */
     public int getId() {
         return id;
     }
 
+    /**
+     * Set the unique identifier for this game
+     *
+     * @param id int
+     */
     public void setId(int id) {
         this.id = id;
     }
 
+    /**
+     * Increments the game clock by the amount represented in 'seconds'
+     *
+     * @param seconds int
+     */
     private void incrementGameTime(int seconds) {
         gameTime += seconds;
     }
 
+    /**
+     * Get a map of the current players on the court for each team
+     *
+     * @return Map<Team, List < Player>>
+     */
     public Map<Team, List<Player>> getPlayersOnCourt() {
         return playersOnCourt;
     }
 
+    /**
+     * Set the current list of players on the court for either team
+     *
+     * @param playersOnCourt Map<Team, List<Player>>
+     */
     public void setPlayersOnCourt(Map<Team, List<Player>> playersOnCourt) {
         this.playersOnCourt = playersOnCourt;
     }
 
+    /**
+     * Get the players on the court currently for the home team
+     *
+     * @return List<Player>
+     */
     private List<Player> getHomePlayersOnCourt() {
         return getPlayersOnCourt().get(getHomeTeam());
     }
 
+    /**
+     * Set the list of players currently on the court for the home team
+     *
+     * @param players List<Player>
+     */
     private void setHomePlayersOnCourt(List<Player> players) {
         getPlayersOnCourt().put(getHomeTeam(), players);
     }
 
+    /**
+     * Get the players on the court currently for the away team
+     *
+     * @return List<Player>
+     */
     private List<Player> getAwayPlayersOnCourt() {
         return getPlayersOnCourt().get(getAwayTeam());
     }
 
+    /**
+     * Set the list of players currently on the court for the away team
+     *
+     * @param players List<Player>
+     */
     private void setAwayPlayersOnCourt(List<Player> players) {
         getPlayersOnCourt().put(getAwayTeam(), players);
     }
 
-
+    /**
+     * Returns the map of player stats accumulated during this game
+     *
+     * @return Map<Player, Map < PlayerStat, Integer>>
+     */
     public Map<Player, Map<PlayerStat, Integer>> getPlayerStats() {
         return playerStats;
     }
 
+    /**
+     * Set the Player stats map
+     *
+     * @param playerStats Map<Player, Map < PlayerStat, Integer>>
+     */
     public void setPlayerStats(Map<Player, Map<PlayerStat, Integer>> playerStats) {
         this.playerStats = playerStats;
     }
 
+    /**
+     * Returns the map of Team Stats accumulated during this game
+     *
+     * @return Map<Team, Map < TeamStat, Integer>>
+     */
     public Map<Team, Map<TeamStat, Integer>> getTeamStats() {
         return teamStats;
     }
 
+    /**
+     * Set the map of team stats
+     *
+     * @param teamStats Map<Team, Map<TeamStat, Integer>>
+     */
     public void setTeamStats(Map<Team, Map<TeamStat, Integer>> teamStats) {
         this.teamStats = teamStats;
     }
 
+    /**
+     * Returns the Home Team
+     *
+     * @return Team
+     */
     public Team getHomeTeam() {
         return homeTeam;
     }
 
+    /**
+     * Set the Home team
+     *
+     * @param homeTeam Team
+     */
     public void setHomeTeam(Team homeTeam) {
         this.homeTeam = homeTeam;
     }
 
+    /**
+     * Get the away team
+     *
+     * @return Team
+     */
     public Team getAwayTeam() {
         return awayTeam;
     }
 
+    /**
+     * Set the away team
+     *
+     * @param awayTeam Team
+     */
     public void setAwayTeam(Team awayTeam) {
         this.awayTeam = awayTeam;
     }
 
+    /**
+     * Return the team currently on offense
+     *
+     * @return Team
+     */
     private Team getTeamOnOffense() {
         return teamOnOffense;
     }
 
+    /**
+     * Return the team currently on defense
+     *
+     * @return Team
+     */
     private Team getTeamOnDefense() {
         return getTeamOnOffense() == getHomeTeam() ? getAwayTeam() : getHomeTeam();
     }
 
+    /**
+     * Return the Team Stats for this game for the Home Team
+     *
+     * @return Map<TeamStat, Integer>
+     */
     public Map<TeamStat, Integer> getHomeTeamStats() {
         return getTeamStats().get(getHomeTeam());
     }
 
+    /**
+     * Return the Team Stats for this game for the Away Team
+     *
+     * @return Map<TeamStat, Integer>
+     */
     public Map<TeamStat, Integer> getAwayTeamStats() {
         return getTeamStats().get(getAwayTeam());
     }
 
+    /**
+     * Return the value of a particular stat for the Home Team
+     *
+     * @param stat TeamStat
+     * @return int
+     */
     private int getHomeTeamStat(TeamStat stat) {
         return Objects.requireNonNull(getHomeTeamStats()).get(stat);
     }
 
+    /**
+     * Return the value of a particular stat for the Away Team
+     *
+     * @param stat TeamStat
+     * @return int
+     */
     private int getAwayTeamStat(TeamStat stat) {
         return Objects.requireNonNull(getAwayTeamStats()).get(stat);
     }
 
+    /**
+     * Returns the value of a particular stat for either the home team or the away team
+     *
+     * @param team Team
+     * @param stat TeamStat
+     * @return int
+     */
     private Integer getTeamStat(Team team, TeamStat stat) {
         if (team == getHomeTeam()) {
             return getHomeTeamStat(stat);
@@ -181,14 +315,33 @@ public class GameSimulation {
         }
     }
 
+    /**
+     * Set a stat value for the Home Team
+     *
+     * @param stat TeamStat
+     * @param val  int
+     */
     private void setHomeTeamStat(TeamStat stat, int val) {
         Objects.requireNonNull(getHomeTeamStats()).put(stat, val);
     }
 
+    /**
+     * Set a stat value for the Away Team
+     *
+     * @param stat TeamStat
+     * @param val  int
+     */
     private void setAwayTeamStat(TeamStat stat, int val) {
         Objects.requireNonNull(getAwayTeamStats()).put(stat, val);
     }
 
+    /**
+     * Set the value of a particular stat for either the home or the away team
+     *
+     * @param team Team
+     * @param stat TeamStat
+     * @param val  int
+     */
     private void setTeamStat(Team team, TeamStat stat, int val) {
         if (team == getHomeTeam()) {
             setHomeTeamStat(stat, val);
@@ -199,74 +352,145 @@ public class GameSimulation {
         }
     }
 
+    /**
+     * Returns the map of player stats for a particular player
+     *
+     * @param player Player
+     * @return Map<PlayerStat, Integer>
+     */
     public Map<PlayerStat, Integer> getPlayerStats(Player player) {
         return getPlayerStats().get(player);
     }
 
+    /**
+     * Returns the exact stat value of a specified Stat for a particular player
+     *
+     * @param player Player
+     * @param stat   PlayerStat
+     * @return int
+     */
     private int getPlayerStat(Player player, PlayerStat stat) {
         return Objects.requireNonNull(getPlayerStats(player)).get(stat);
     }
 
+    /**
+     * Set a player stat for a particular player
+     *
+     * @param player Player
+     * @param stat   PlayerStat
+     * @param val    int
+     */
     private void setPlayerStat(Player player, PlayerStat stat, int val) {
         Objects.requireNonNull(getPlayerStats(player)).put(stat, val);
     }
 
+    /**
+     * Increments a player's stat value by a specified amount
+     *
+     * @param player Player
+     * @param stat   PlayerStat
+     * @param amount int
+     */
     private void incrementPlayerStat(Player player, PlayerStat stat, int amount) {
         setPlayerStat(player, stat,
                 getPlayerStat(player, stat) + amount);
     }
 
+    /**
+     * Increments a team's stat value for the specified stat by the specified amount
+     *
+     * @param team   Team
+     * @param stat   TeamStat
+     * @param amount int
+     */
     private void incrementTeamStat(Team team, TeamStat stat, int amount) {
         setTeamStat(team, stat,
                 getTeamStat(team, stat) + amount);
     }
 
+    /**
+     * Swaps the possession by switching the teams on offense and defense
+     */
     private void swapPossession() {
         teamOnOffense = getTeamOnDefense();
     }
 
+    /**
+     * Determines if the regulation period is over. Regulation ends when the gameTime
+     * has either met or passed the GAME_LENGTH_SECONDS variable
+     *
+     * @return boolean
+     */
     private boolean regulationIsOver() {
         return gameTime >= GAME_LENGTH_SECONDS;
     }
 
+    /**
+     * Determines whether overtime periods are needed. An overtime period is needed if the regulation period has
+     * ended but the score is still tied
+     *
+     * @return boolean
+     */
     private boolean overtimeRequired() {
         assert regulationIsOver();
         return getHomeTeamStat(TeamStat.TEAM_PTS) == getAwayTeamStat(TeamStat.TEAM_PTS);
     }
 
+    /**
+     * Returns the team that won the game
+     *
+     * @return Team
+     */
     private Team getWinner() {
         assert regulationIsOver();
         return (getHomeTeamStat(TeamStat.TEAM_PTS) > getAwayTeamStat(TeamStat.TEAM_PTS)) ? getHomeTeam() : getAwayTeam();
     }
 
+    /**
+     * Returns the team that lost the game
+     *
+     * @return Team
+     */
     private Team getLoser() {
         assert regulationIsOver();
         return (getWinner() == getHomeTeam()) ? getAwayTeam() : getHomeTeam();
     }
 
     /**
-     * Performs substitutions if needed.
+     * This function gets called at the the end of each possession. It essentially checks whether a timeout and swap of
+     * players on the court should happen. In the current implementation, the starting players on the court are subbed
+     * out once their energy goes below 0.6. They are replaced with the next best player in that team's roster
      */
     private void modifyPlayersOnCourt() {
+        // Energy threshold for subbing out
         double energyLimit = 0.6;
+        // Keep lists of each player we need to sub out
         List<Player> homePlayersToRemove = new ArrayList<>();
         List<Player> awayPlayersToRemove = new ArrayList<>();
 
+        /*
+        Iterate over both the home and away teams current players on the court. Mark any players who fall under the
+        energy threshold as players that need to be replaced
+         */
         for (Player p : getHomePlayersOnCourt())
             if (p.getPlayerEnergy() <= energyLimit)
                 homePlayersToRemove.add(p);
-
-
         for (Player p : getAwayPlayersOnCourt())
             if (p.getPlayerEnergy() <= energyLimit)
                 awayPlayersToRemove.add(p);
 
+        /*
+        Remove the players from the court that have low energy
+         */
         for (Player p : homePlayersToRemove)
             getHomePlayersOnCourt().remove(p);
         for (Player p : awayPlayersToRemove)
             getAwayPlayersOnCourt().remove(p);
 
-
+        /*
+        For both the home and away, populate the list of players on the court with new players that have full energy.
+        This effectively counts as a player substitution
+         */
         for (Player p : getHomeTeam().getRankedRoster()) {
             if (getHomePlayersOnCourt().size() == 5)
                 break;
@@ -275,7 +499,6 @@ public class GameSimulation {
                     p.getPlayerEnergy() == 1.0)
                 getHomePlayersOnCourt().add(p);
         }
-
         for (Player p : getAwayTeam().getRankedRoster()) {
             if (getAwayPlayersOnCourt().size() == 5)
                 break;
@@ -288,10 +511,15 @@ public class GameSimulation {
 
     /**
      * After each play, the players on the court experience an energy decay at a rate of playLength/1000.
-     * When a players energy goes below 0.8, they will be subbed out. Players not on the court experience an energy boost
-     * at the same rate
+     * When a players energy goes below 0.6, they will be subbed out. Players not on the court experience an energy boost
+     * at the same rate, unless they already have full energy (1.0).
+     * <p>
+     * For example, if a play takes 20 seconds, the energy decay amount would be (20/1000) = 0.02. Therefore, everyone who
+     * is currently on the court loses 0.02 energy, and at the same time, everyone on the bench experiences an energy
+     * boost of 0.02, unless they already have full energy.
      */
     private void scaleEnergyForPlayers(int playLength) {
+        // Energy amount to scale by
         double amount = Utils.round(playLength / 1000.0, 4);
         for (Player p : getHomeTeam().getRoster())
             if (getHomePlayersOnCourt().contains(p))
@@ -308,19 +536,34 @@ public class GameSimulation {
     }
 
     /**
-     * Determine who wins a tip off randomly
+     * Determine who wins a tip off randomly. In the current implementation, each team has equal odds of winning the
+     * tipoff. In future iterations, this should probably take into consideration the starting centers height
      */
     private void determineRandomTipOffWinner() {
-        teamOnOffense = (League.getInstance().getRandomDouble(0.0, 1.0) > 0.5) ? getHomeTeam() : getAwayTeam();
+        teamOnOffense = (League.getInstance().getRandomDouble(0.0, 1.0) > 0.5)
+                ? getHomeTeam() : getAwayTeam();
     }
 
     /**
-     * Randomly determine how long a possession will take
+     * Randomly determine how long a possession will take. I set the lower bound to 4 since it's hard to get a play
+     * to happen quicker than that. The upper limit is the length of the shot clock (24 seconds).
+     *
+     * @return int
      */
     private int determinePossessionTime() {
         return League.getInstance().getRandomInteger(4, SHOT_CLOCK_LENGTH_SECONDS);
     }
 
+    /**
+     * Randomly determine if a turnover will occur this possession. The calculation is as follows:
+     * Take the teams average turnovers per game and divide it by the length of the game in minutes. Compare this value
+     * to a random double to see if it will occur.
+     * <p>
+     * Should the team not have any historical stat values for turnovers, then a league default turnover rate is used
+     * in lieu (set to 0.8, meaning there is a 8% chance of a turnover)
+     *
+     * @return boolean
+     */
     private boolean determineIfTurnover() {
         double turnoverProb = (Integer) getTeamOnOffense().getStatContainer().getAvgValueOfStat(TeamStat.TEAM_TOV)
                 / GAME_LENGTH_MIN;
@@ -328,6 +571,10 @@ public class GameSimulation {
         return turnoverProb >= League.getInstance().getRandomDouble(0.0, 1.0);
     }
 
+    /**
+     * Used when determineIfTurnover() returns true. Will increment both team and player stats marking that a turnover
+     * was committed.
+     */
     private void simulateTurnover() {
         // Turnover occurred
         // Pick a player who committed the turnover randomly
@@ -341,25 +588,39 @@ public class GameSimulation {
     }
 
     /**
-     * Determines if a foul will happen now.
+     * Randomly determine if a foul will happen. This function is used before simulateShot, meaning it only simulates
+     * non-shooting fouls
+     * The possibility of a non-shooting foul occurring is currently set to FOUL_RATE (0.05) meaning there is a 5%
+     * chance of a foul occurring
+     *
+     * @return boolean
      */
     private boolean determineIfFoul() {
         // A foul occurs if a random double is below the foul rate threshold
         return FOUL_RATE >= League.getInstance().getRandomDouble(0.0, 1.0);
     }
 
+    /**
+     * Simulates a free throw event. This function does not determine if a foul occured, it should only be called
+     * after that determination has happened. If 'fouledPlayer' is null, the simulation will randomly pick a player that
+     * was fouled.
+     * <p>
+     * A random player is picked as the fouling player.
+     *
+     * @param foulingTeam  Team: The team that committed the fouled
+     * @param numShots     int: the number of free throws to take
+     * @param fouledPlayer Player: The player who was fouled. Can be null
+     */
     private void simulateFreeThrows(Team foulingTeam, int numShots, Player fouledPlayer) {
-        // If the fouling team was on defense, then the offense shoots  free throws. Else we just increment foul stats
-        // and return so that possession can change
 
-        // Pick a player who committed the foul
+        // Pick a player who committed the foul randomly.
         int index = League.getInstance().getRandomInteger(0, 4);
         Player foulingPlayer = (foulingTeam == getHomeTeam()) ?
                 getHomePlayersOnCourt().get(index) : getAwayPlayersOnCourt().get(index);
         // Increment team and player foul stats
         incrementTeamStat(foulingTeam, TeamStat.TEAM_FOULS, 1);
         incrementPlayerStat(foulingPlayer, PlayerStat.FOULS, 1);
-        // If the fouling team was defense, then the offense shoots free throws
+        // If the fouling team was defense, then the offense shoots free throws. Else the possession will just change.
         if (foulingTeam == getTeamOnDefense()) {
             // Pick a player to shoot the foul shots if not set
             if (fouledPlayer == null) {
@@ -371,27 +632,37 @@ public class GameSimulation {
                     + " has committed a foul on " + fouledPlayer.getName());
             // Simulate each free throw taking into consideration the players free throw rating
             for (int i = 0; i < numShots; i++) {
+                // A free-throw is made if the fouledPlayers free throw attribute is higher than the random number
+                // that is generated
                 if (League.getInstance().getRandomDouble(0.0, 1.0) <=
                         fouledPlayer.getPlayerAttribute(PlayerAttributes.FREE_THROW)) {
+                    // Free throw made! Increment stats as needed
                     System.out.println(fouledPlayer.getName() + " has made one free-throw");
                     incrementTeamStat(getTeamOnOffense(), TeamStat.TEAM_PTS, 1);
                     incrementTeamStat(getTeamOnOffense(), TeamStat.TEAM_FREE_THROW_MADE, 1);
                     incrementPlayerStat(fouledPlayer, PlayerStat.FREE_THROW_MADE, 1);
                     incrementPlayerStat(fouledPlayer, PlayerStat.PTS, 1);
                 }
+                // Increment free throws attempted stats
                 incrementPlayerStat(fouledPlayer, PlayerStat.FREE_THROW_ATTEMPTS, 1);
                 incrementTeamStat(getTeamOnOffense(), TeamStat.TEAM_FREE_THROW_ATTEMPTS, 1);
             }
         }
     }
 
+    /**
+     * Simulates a three point shot
+     *
+     * @param shooter Player: the player shooting the 3 pointer
+     */
     private void simulateThreePointer(Player shooter) {
-        // Three point attempt
+        // Three point attempt, increment stats
         incrementTeamStat(getTeamOnOffense(), TeamStat.TEAM_THREE_POINT_ATTEMPTS, 1);
         incrementPlayerStat(shooter, PlayerStat.THREE_POINT_ATTEMPTS, 1);
         // Check if the shot was made based of thee players three pt attr
         if (League.getInstance().getRandomDouble(0.0, 1.0)
                 <= shooter.getPlayerAttribute(PlayerAttributes.THREE_P_SCORING)) {
+            // Three point shot made! Increment stats as needed
             System.out.println(shooter.getName() + " has made a three point shot");
             incrementTeamStat(getTeamOnOffense(), TeamStat.TEAM_THREE_POINT_MADE, 1);
             incrementTeamStat(getTeamOnOffense(), TeamStat.TEAM_PTS, 3);
@@ -402,12 +673,21 @@ public class GameSimulation {
         }
     }
 
+    /**
+     * Utility function to record a two pointer being made. Used in simulateTwoPointer. Will increment stats
+     * accordingly and also force free throws if there was an and-one
+     *
+     * @param shooter Player: the player shooting the ball
+     * @param andOne  boolean: Whether the player was fouled in the act of shooting
+     */
     private void recordMadeTwoPointer(Player shooter, boolean andOne) {
+        // Increment stats
         incrementTeamStat(getTeamOnOffense(), TeamStat.TEAM_TWO_POINT_MADE, 1);
         incrementTeamStat(getTeamOnOffense(), TeamStat.TEAM_PTS, 2);
         incrementPlayerStat(shooter, PlayerStat.TWO_POINT_MADE, 1);
         incrementPlayerStat(shooter, PlayerStat.PTS, 2);
         if (andOne) {
+            // If the player was fouled in the act of shooting, simulate a free throw
             System.out.println(shooter.getName() + " has made a two-point shot with an and-one");
             simulateFreeThrows(getTeamOnDefense(), 1, shooter);
         } else {
@@ -415,16 +695,24 @@ public class GameSimulation {
         }
     }
 
+    /**
+     * Function to simulate two pointers. Two pointers can either be a mid-range shot or a shot in the post. The shooter
+     * will pick the one they are better at (I.e. whichever attribute is higher). If it is a inside shot, it can either
+     * be a dunk or a layup. Again, this determination is made based off the players attributes and what they are better at
+     *
+     * @param shooter Player
+     */
     private void simulateTwoPointer(Player shooter) {
         // First determine if this will be a mid-range shot or a shot inside the post. To determine this, we look
         // at the players MID_RANGE_SHOOTING and INSIDE_SCORING attributes.
         double insideScoringAttr = shooter.getPlayerAttribute(PlayerAttributes.INSIDE_SCORING);
         double midRangeShotAttr = shooter.getPlayerAttribute(PlayerAttributes.MID_SCORING);
+        // Increment attempts stat
         incrementTeamStat(getTeamOnOffense(), TeamStat.TEAM_TWO_POINT_ATTEMPTS, 1);
         incrementPlayerStat(shooter, PlayerStat.TWO_POINT_ATTEMPTS, 1);
         if (midRangeShotAttr > insideScoringAttr) {
             // Player will take a mid-range jump shot
-            double probabilityFoul = 0.8;
+            double probabilityFoul = 0.8; // A mid range shot has an 8% chance of being fouled
             double outcome = League.getInstance().getRandomDouble(0.0, 1.0);
             // First check if player was fouled without making a shot
             if (outcome <= probabilityFoul) {
@@ -434,7 +722,7 @@ public class GameSimulation {
             // Next check if the shot was made
             if (outcome <= midRangeShotAttr) {
                 // Player made the shot!
-                // Check to see if an and-one
+                // Check to see if an and-one orobability is 5% for mid range shots
                 boolean probabilityAndOne = (League.getInstance().getRandomDouble(0.0, 1.0)) <= 0.05;
                 recordMadeTwoPointer(shooter, probabilityAndOne);
             }
@@ -443,7 +731,7 @@ public class GameSimulation {
             double dunkAttribute = shooter.getPlayerAttribute(PlayerAttributes.DUNK);
             if (dunkAttribute > insideScoringAttr) {
                 // Dunk
-                double probabilityFoul = 0.4;
+                double probabilityFoul = 0.4; // Probability of foul on dunk is 40%
                 double outcome = League.getInstance().getRandomDouble(0.0, 1.0);
                 if (outcome <= probabilityFoul) {
                     simulateFreeThrows(getTeamOnDefense(), 2, shooter);
@@ -451,7 +739,7 @@ public class GameSimulation {
                 }
                 if (outcome <= dunkAttribute) {
                     // Player made the dunk!
-                    // Check to see if an and-one
+                    // Check to see if an and-one, probability is 25% on dunks
                     boolean probabilityAndOne = (League.getInstance().getRandomDouble(0.0, 1.0)) <= 0.25;
                     recordMadeTwoPointer(shooter, probabilityAndOne);
                 }
@@ -474,6 +762,10 @@ public class GameSimulation {
     }
 
 
+    /**
+     * Simulate a shot during a team's possession. First a random player is chosen as the shooter. If that shooter has
+     * an above-average 3pt-shot then they will take a 3 pointer. Else they will take a two-pointer.
+     */
     private void simulateShot() {
         // First pick a player to be the shooting player
         int i = League.getInstance().getRandomInteger(0, 4);
@@ -494,6 +786,15 @@ public class GameSimulation {
         }
     }
 
+    /**
+     * Simulate an entire possession. There are various things that can happen:
+     * 1. If at the end of a game and the score is a blowout the winning team runs out the clock
+     * 2. A turnover may occur
+     * 3. A foul may occur
+     * 4. If none of those occur, then the offensive team will attempt to take a shot
+     *
+     * @return int: the length of time this play took
+     */
     private int simPlay() {
         int playLength = determinePossessionTime();
         int pointDiff = getHomeTeamStat(TeamStat.TEAM_PTS) - getAwayTeamStat(TeamStat.TEAM_PTS);
@@ -578,15 +879,12 @@ public class GameSimulation {
             for (Map.Entry<PlayerStat, Integer> entry : getPlayerStats(p).entrySet())
                 System.out.println(entry.getKey() + " = " + entry.getValue());
         }
-
-
     }
-
 
     /**
      * Simulate the game, including any overtimes
      *
-     * @return The winning team
+     * @return Team: The winning team
      */
     public Team simulateGame() {
         simRegulation();

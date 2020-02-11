@@ -6,9 +6,15 @@ import org.json.simple.JSONObject;
 import java.util.Map;
 
 /**
+ * CS-622
+ * Entity.java
+ * <p>
  * A JavaBasketballGM entity is an object that has a name, and an ID, along with a map of attributes which are stored as
  * String:Double entries.These things define that particular entity. Each entity must also have the ability to save
  * itself to a JSON string, and load itself from a JSON string
+ *
+ * @author Andras Palfi apalfi@bu.edu
+ * @version 1.0
  */
 public interface Entity {
 

@@ -6,7 +6,13 @@ import gameplay.StatContainer;
 import org.json.simple.JSONObject;
 
 /**
+ * CS-622
+ * Player.java
+ * <p>
  * The Player subclass of AbstractEntity represents a basketball player in the League
+ *
+ * @author Andras Palfi apalfi@bu.edu
+ * @version 1.0
  */
 public class Player extends AbstractEntity {
 

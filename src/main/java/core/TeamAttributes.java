@@ -1,5 +1,14 @@
 package core;
 
+/**
+ * CS-622
+ * TeamAttributes.java
+ * <p>
+ * The TeamAttributes enum details the types of attributes that a Team can have
+ *
+ * @author Andras Palfi apalfi@bu.edu
+ * @version 1.0
+ */
 public enum TeamAttributes {
     HEIGHT,
     STRENGTH,

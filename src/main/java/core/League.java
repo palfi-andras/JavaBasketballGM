@@ -22,11 +22,17 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
+ * CS-622
+ * League.java
+ * <p>
  * The League class is the largest AbstractEntity concrete class, and is charged with managing all other AbstractEntities
  * such as the teams and the layers.
  * <p>
  * The League is used as a singleton since the program supports only one League at a time. This singleton contains most
  * of the core logic required to managing and simulating the league.
+ *
+ * @author Andras Palfi apalfi@bu.edu
+ * @version 1.0
  */
 public class League extends AbstractEntity {
 
@@ -330,8 +336,11 @@ public class League extends AbstractEntity {
             System.out.println("There are no games to play!");
             return;
         }
-        for (GameSimulation game : getGames())
+        for (GameSimulation game : getGames()) {
             recordGameResult(game.simulateGame());
+            recordStats(game);
+        }
+
         System.out.println("\n\nRankings: ");
         Map<Team, Long> results = getGameResults().stream().collect(Collectors.groupingBy(Function.identity(), Collectors.counting()));
         Map<Team, Long> sortedMapReverseOrder = results.entrySet().

@@ -14,6 +14,16 @@ import java.math.RoundingMode;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * CS-622
+ * Utils.java
+ * <p>
+ * THe utils class offers some wrapper functions that are useful throughout the program. The entire class is static
+ * therefore it has no context about the current league other than information that is passed to it in function parameters
+ *
+ * @author Andras Palfi apalfi@bu.edu
+ * @version 1.0
+ */
 public class Utils {
     /**
      * Save the current league instance to a JSON file
