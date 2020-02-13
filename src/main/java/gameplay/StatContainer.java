@@ -136,7 +136,7 @@ public class StatContainer<K, E extends Number & Comparable<E>> {
      * @param stat K
      * @return E
      */
-    E getAvgValueOfStat(K stat) {
+    public E getAvgValueOfStat(K stat) {
         if (!statExists(stat) || statIsEmpty(stat))
             return (E) (Integer) 0;
         E avg = getAvgContainer().get(stat);

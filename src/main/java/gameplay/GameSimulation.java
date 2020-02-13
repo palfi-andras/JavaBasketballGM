@@ -8,6 +8,7 @@ import core.Utils;
 
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -60,6 +61,7 @@ public class GameSimulation {
     // The simulation happens by running plays and determining how long they take in seconds. THe gameTime is
     // incremented after each play until it reaches the end of the game time (GAME_LENGTH_SECONDS)
     private int gameTime = 0;
+    private List<String> gameLog = new LinkedList<>();
 
 
     public GameSimulation(Team home, Team away) {
@@ -104,6 +106,14 @@ public class GameSimulation {
      */
     public void setId(int id) {
         this.id = id;
+    }
+
+    public List<String> getGameLog() {
+        return gameLog;
+    }
+
+    private void log(String message) {
+        gameLog.add(message);
     }
 
     /**
@@ -283,7 +293,7 @@ public class GameSimulation {
      * @param stat TeamStat
      * @return int
      */
-    private int getHomeTeamStat(TeamStat stat) {
+    public int getHomeTeamStat(TeamStat stat) {
         return Objects.requireNonNull(getHomeTeamStats()).get(stat);
     }
 
@@ -293,7 +303,7 @@ public class GameSimulation {
      * @param stat TeamStat
      * @return int
      */
-    private int getAwayTeamStat(TeamStat stat) {
+    public int getAwayTeamStat(TeamStat stat) {
         return Objects.requireNonNull(getAwayTeamStats()).get(stat);
     }
 
@@ -426,6 +436,26 @@ public class GameSimulation {
     }
 
     /**
+     * TODO: Returns true if overtime is finished
+     */
+    private boolean overtimeIsOver() {
+        if (regulationIsOver() && !overtimeRequired())
+            return true;
+
+        return regulationIsOver();
+
+    }
+
+    /**
+     * Returns true if the entire game (regulation + OT) is done
+     *
+     * @return boolean
+     */
+    public boolean gameIsOver() {
+        return regulationIsOver();
+    }
+
+    /**
      * Determines whether overtime periods are needed. An overtime period is needed if the regulation period has
      * ended but the score is still tied
      *
@@ -441,7 +471,7 @@ public class GameSimulation {
      *
      * @return Team
      */
-    private Team getWinner() {
+    public Team getWinner() {
         assert regulationIsOver();
         return (getHomeTeamStat(TeamStat.TEAM_PTS) > getAwayTeamStat(TeamStat.TEAM_PTS)) ? getHomeTeam() : getAwayTeam();
     }
@@ -451,7 +481,7 @@ public class GameSimulation {
      *
      * @return Team
      */
-    private Team getLoser() {
+    public Team getLoser() {
         assert regulationIsOver();
         return (getWinner() == getHomeTeam()) ? getAwayTeam() : getHomeTeam();
     }
@@ -507,6 +537,8 @@ public class GameSimulation {
                     p.getPlayerEnergy() == 1.0)
                 getAwayPlayersOnCourt().add(p);
         }
+        assert getHomePlayersOnCourt().size() == 5 &&
+                getAwayPlayersOnCourt().size() == 5;
     }
 
     /**
@@ -630,6 +662,8 @@ public class GameSimulation {
             }
             System.out.println(foulingPlayer.getName() + " from " + foulingTeam.getName()
                     + " has committed a foul on " + fouledPlayer.getName());
+            log(String.format("%s from %s has committed a foul on %s", foulingPlayer.getName(),
+                    foulingTeam.getName(), fouledPlayer.getName()));
             // Simulate each free throw taking into consideration the players free throw rating
             for (int i = 0; i < numShots; i++) {
                 // A free-throw is made if the fouledPlayers free throw attribute is higher than the random number
@@ -638,6 +672,7 @@ public class GameSimulation {
                         fouledPlayer.getPlayerAttribute(PlayerAttributes.FREE_THROW)) {
                     // Free throw made! Increment stats as needed
                     System.out.println(fouledPlayer.getName() + " has made one free-throw");
+                    log(String.format("%s has made a free throw", fouledPlayer.getName()));
                     incrementTeamStat(getTeamOnOffense(), TeamStat.TEAM_PTS, 1);
                     incrementTeamStat(getTeamOnOffense(), TeamStat.TEAM_FREE_THROW_MADE, 1);
                     incrementPlayerStat(fouledPlayer, PlayerStat.FREE_THROW_MADE, 1);
@@ -664,12 +699,14 @@ public class GameSimulation {
                 <= shooter.getPlayerAttribute(PlayerAttributes.THREE_P_SCORING)) {
             // Three point shot made! Increment stats as needed
             System.out.println(shooter.getName() + " has made a three point shot");
+            log(String.format("%s has made a three point shot", shooter.getName()));
             incrementTeamStat(getTeamOnOffense(), TeamStat.TEAM_THREE_POINT_MADE, 1);
             incrementTeamStat(getTeamOnOffense(), TeamStat.TEAM_PTS, 3);
             incrementPlayerStat(shooter, PlayerStat.THREE_POINT_MADE, 1);
             incrementPlayerStat(shooter, PlayerStat.PTS, 3);
         } else {
             System.out.println(shooter.getName() + " has missed a 3 point shot");
+            log(String.format("%s has missed a three point shot", shooter.getName()));
         }
     }
 
@@ -689,9 +726,11 @@ public class GameSimulation {
         if (andOne) {
             // If the player was fouled in the act of shooting, simulate a free throw
             System.out.println(shooter.getName() + " has made a two-point shot with an and-one");
+            log(String.format("%s has made a two-point shot with an and-one", shooter.getName()));
             simulateFreeThrows(getTeamOnDefense(), 1, shooter);
         } else {
             System.out.println(shooter.getName() + " has made a two-point shot");
+            log(String.format("%s has made a two-point shot", shooter.getName()));
         }
     }
 

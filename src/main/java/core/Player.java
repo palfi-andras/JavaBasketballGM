@@ -58,11 +58,18 @@ public class Player extends AbstractEntity {
     /**
      * Returns the over rating of this players, which is the avg of all of its attributes
      */
-    int getOverallPlayerRating() {
+    public int getOverallPlayerRating() {
         double avg = 0.0;
         for (double attrVal : getEntityAttributes().values())
             avg += attrVal;
         return (int) ((avg / getEntityAttributes().size()) * 100);
+    }
+
+    /**
+     * Returns this players average points per game
+     */
+    double getPlayerPointsPerGame() {
+        return (double) getStatContainer().getAvgValueOfStat(PlayerStat.PTS);
     }
 
     public double getPlayerEnergy() {

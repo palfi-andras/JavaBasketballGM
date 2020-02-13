@@ -184,7 +184,7 @@ public class League extends AbstractEntity {
     /**
      * @return list of games in the league
      */
-    private List<GameSimulation> getGames() {
+    public List<GameSimulation> getGames() {
         return games;
     }
 
@@ -209,7 +209,7 @@ public class League extends AbstractEntity {
      *
      * @param winner Team the winner of the game
      */
-    private void recordGameResult(Team winner) {
+    void recordGameResult(Team winner) {
         getGameResults().add(winner);
     }
 
@@ -357,7 +357,7 @@ public class League extends AbstractEntity {
     /**
      * Updates Player and Team StatContainers after a game has ended
      */
-    private void recordStats(GameSimulation game) {
+    void recordStats(GameSimulation game) {
         for (Map.Entry<TeamStat, Integer> entry : game.getHomeTeamStats().entrySet())
             getEntity(game.getHomeTeam().getID()).getStatContainer().updateStat(entry.getKey(), entry.getValue());
 
@@ -377,7 +377,7 @@ public class League extends AbstractEntity {
         return getPlayerEntityIndexes().size();
     }
 
-    private AbstractEntity getEntity(int id) {
+    public AbstractEntity getEntity(int id) {
         for (AbstractEntity entity : getEntities()) {
             if (entity.getID() == id)
                 return entity;
@@ -390,7 +390,7 @@ public class League extends AbstractEntity {
      *
      * @return <List><Integer>indexes</Integer></List>
      */
-    private List<Integer> getTeamEntityIndexes() {
+    List<Integer> getTeamEntityIndexes() {
         List<Integer> indexes = new LinkedList<>();
         for (int i = 0; i <= getEntities().size() - 1; i++)
             if (getEntities().get(i) instanceof Team)
@@ -408,7 +408,7 @@ public class League extends AbstractEntity {
      *
      * @return <List><Integer>indexes</Integer></List>
      */
-    private List<Integer> getPlayerEntityIndexes() {
+    List<Integer> getPlayerEntityIndexes() {
         List<Integer> indexes = new LinkedList<>();
         for (int i = 0; i <= getEntities().size() - 1; i++)
             if (getEntities().get(i) instanceof Player)

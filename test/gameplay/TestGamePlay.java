@@ -10,5 +10,6 @@ public class TestGamePlay {
         League.getInstance().automatedDraft();
         League.getInstance().setupRoundRobinTournament();
         League.getInstance().simulateRoundRobinTournament();
+        League.getInstance();
     }
 }

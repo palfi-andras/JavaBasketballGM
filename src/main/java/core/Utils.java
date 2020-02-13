@@ -11,7 +11,7 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -66,14 +66,14 @@ public class Utils {
     }
 
     public static Map<TeamStat, Integer> createTeamStatIntMap() {
-        Map<TeamStat, Integer> map = new HashMap<>();
+        Map<TeamStat, Integer> map = new LinkedHashMap<>();
         for (TeamStat stat : TeamStat.values())
             map.put(stat, 0);
         return map;
     }
 
     public static Map<PlayerStat, Integer> createPlayerStatIntMap() {
-        Map<PlayerStat, Integer> map = new HashMap<>();
+        Map<PlayerStat, Integer> map = new LinkedHashMap<>();
         for (PlayerStat stat : PlayerStat.values())
             map.put(stat, 0);
         return map;
