@@ -59,6 +59,7 @@ public class League extends AbstractEntity {
     private List<GameSimulation> games = new LinkedList<>();
     // A list of teams who won games in this league
     private List<Team> gameResults = new LinkedList<>();
+    private Team userTeam;
 
     /**
      * Constructors
@@ -98,6 +99,11 @@ public class League extends AbstractEntity {
      */
     private static League getInstance(AbstractEntity previous) {
         instance = new League(previous.getID(), previous.getName());
+        return instance;
+    }
+
+    static League getInstance(League previous) {
+        instance = previous;
         return instance;
     }
 
@@ -158,6 +164,14 @@ public class League extends AbstractEntity {
 
     private void setCities(List<String> cities) {
         this.cities = cities;
+    }
+
+    public Team getUserTeam() {
+        return userTeam;
+    }
+
+    public void setUserTeam(Team userTeam) {
+        this.userTeam = userTeam;
     }
 
     /**

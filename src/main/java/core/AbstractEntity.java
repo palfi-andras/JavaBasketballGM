@@ -3,6 +3,7 @@ package core;
 import gameplay.StatContainer;
 import org.json.simple.JSONObject;
 
+import java.io.Serializable;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -19,7 +20,7 @@ import static java.lang.Math.toIntExact;
  * @author Andras Palfi apalfi@bu.edu
  * @version 1.0
  */
-public class AbstractEntity implements Entity {
+public class AbstractEntity implements Entity, Serializable {
     // Each abstract Entity is required to have a name, id, and a map of attributes
     private String entityName;
     private int id;

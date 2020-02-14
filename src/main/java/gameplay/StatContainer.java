@@ -3,6 +3,7 @@ package gameplay;
 import core.Utils;
 import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -34,7 +35,7 @@ import java.util.Set;
  * @author Andras Palfi apalfi@bu.edu
  * @version 1.0
  */
-public class StatContainer<K, E extends Number & Comparable<E>> {
+public class StatContainer<K, E extends Number & Comparable<E>> implements Serializable {
 
     // The base container keeps a list of all instances of a stat that has been encountered
     private Map<K, List<E>> baseContainer;
@@ -87,6 +88,9 @@ public class StatContainer<K, E extends Number & Comparable<E>> {
      */
     public E getSumOfStatContainer(K stat) {
         assert statExists(stat);
+        if (!statExists(stat) || getBaseContainer().get(stat).size() == 0) {
+            return (E) (Integer) 0;
+        }
         if (getBaseContainer().get(stat).get(0) instanceof Integer) {
             Integer sum = 0;
             for (E val : getBaseContainer().get(stat))

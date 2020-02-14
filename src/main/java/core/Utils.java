@@ -6,9 +6,14 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.LinkedHashMap;
@@ -31,11 +36,42 @@ public class Utils {
      * @param league League
      */
     public static void saveLeague(League league) {
-        String fileName = "./resources/" + league.getName() + ".json";
+        saveLeague(league, league.getName());
+    }
+
+    public static void saveLeague(League league, String fileName) {
+        String path = "./resources/" + fileName + ".json";
         try (FileWriter file = new FileWriter(fileName)) {
             file.write(league.getJSONString());
         } catch (IOException e) {
             e.printStackTrace();
+        }
+    }
+
+    public static boolean saveLeague(League league, File file, Team userTeam) {
+        try (FileWriter fileWriter = new FileWriter(file)) {
+            JSONObject json = league.getJSONObject();
+            json.put("userTeam", userTeam.getID());
+            fileWriter.write(json.toString());
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
+    public static boolean serializeLeague(League league, String filename, Team userTeam) {
+        try {
+            FileOutputStream file = new FileOutputStream(filename);
+            ObjectOutputStream out = new ObjectOutputStream(file);
+            league.setUserTeam(userTeam);
+            out.writeObject(league);
+            out.close();
+            file.close();
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
         }
     }
 
@@ -45,17 +81,54 @@ public class Utils {
      * @param fileName String
      * @return League
      */
-    public static League loadLeague(String fileName) {
+    public static boolean loadLeague(String fileName) {
         try (FileReader reader = new FileReader(fileName)) {
             JSONParser parser = new JSONParser();
             JSONObject json = (JSONObject) parser.parse(reader);
-            return League.loadLeagueFromJSON(json);
+            League.loadLeagueFromJSON(json);
+            return true;
+        } catch (IOException | ParseException | LeagueLoadException e) {
+            System.err.println(e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public static Integer loadLeagueWithUserTeam(String fileName) {
+        try (FileReader reader = new FileReader(fileName)) {
+            JSONParser parser = new JSONParser();
+            JSONObject json = (JSONObject) parser.parse(reader);
+            if (!json.containsKey("userTeam"))
+                return null;
+            Integer team = Integer.valueOf(json.get("userTeam").toString());
+            json.remove("userTeam");
+            League.loadLeagueFromJSON(json);
+            return team;
         } catch (IOException | ParseException | LeagueLoadException e) {
             System.err.println(e.getMessage());
             e.printStackTrace();
             return null;
         }
     }
+
+    public static boolean deserializeLeague(String filename) {
+        League league;
+
+        // Deserialization
+        try {
+            FileInputStream file = new FileInputStream(filename);
+            ObjectInputStream in = new ObjectInputStream(file);
+            league = (League) in.readObject();
+            League.getInstance(league);
+            in.close();
+            file.close();
+            return true;
+        } catch (IOException | ClassNotFoundException ex) {
+            ex.printStackTrace();
+        }
+        return false;
+    }
+
 
     public static double round(double value, int places) {
         if (places < 0) throw new IllegalArgumentException();

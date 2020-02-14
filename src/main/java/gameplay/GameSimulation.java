@@ -6,6 +6,7 @@ import core.PlayerAttributes;
 import core.Team;
 import core.Utils;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedList;
@@ -24,7 +25,7 @@ import java.util.Objects;
  * @author Andras Palfi apalfi@bu.edu
  * @version 1.0
  */
-public class GameSimulation {
+public class GameSimulation implements Serializable {
     // The amount of fouls a player can get before they foul out of the game
     private static final int FOUL_LIMIT = 6;
     // THe length in minutes of each quarter
@@ -40,6 +41,7 @@ public class GameSimulation {
     private static final int BLOWOUT = 20;
     // The rate that random fouls occur (Non-shooting fouls only)
     private static final double FOUL_RATE = 0.05;
+    private static final double STEAL_RATE = 0.05;
     // Default value for how often turnovers occur
     private static final double TURNOVER_RATE = 0.08;
     // For now we'll assume timeouts get called every 5 minutes
@@ -811,14 +813,26 @@ public class GameSimulation {
         Player shooter = (getTeamOnOffense() == getHomeTeam())
                 ? getHomePlayersOnCourt().get(i) : getAwayPlayersOnCourt().get(i);
         // First we check to see if a 3 pointer can occur
-//        double playerThreePtPercent = shooter.getSumOfPlayerStat(PlayerStat.THREE_POINT_MADE) /
-//        shooter.getSumOfPlayerStat(PlayerStat.THREE_POINT_ATTEMPTS);
-        //double teamThreePtPercent = getTeamOnOffense().getSumOfTeamStat(TeamStat.TEAM_THREE_POINT_MADE) /
-        // getTeamOnOffense().getSumOfTeamStat(TeamStat.TEAM_THREE_POINT_ATTEMPTS);
-        //double threePtCutoffPoint = ((playerThreePtPercent + teamThreePtPercent) / 0.2) * 0.3;
+        double playerThreePtPercent;
+        double teamThreePtPercent;
+        try {
+            playerThreePtPercent = shooter.getSumOfPlayerStat(PlayerStat.THREE_POINT_MADE) /
+                    shooter.getSumOfPlayerStat(PlayerStat.THREE_POINT_ATTEMPTS);
+            teamThreePtPercent = getTeamOnOffense().getSumOfTeamStat(TeamStat.TEAM_THREE_POINT_MADE) /
+                    getTeamOnOffense().getSumOfTeamStat(TeamStat.TEAM_THREE_POINT_ATTEMPTS);
+        } catch (ArithmeticException e) {
+            playerThreePtPercent = 0;
+            teamThreePtPercent = 0;
+        }
+        double threePtCutoffPoint = (playerThreePtPercent == 0 || teamThreePtPercent == 0) ?
+                0 : ((playerThreePtPercent + teamThreePtPercent) / 0.2) * 0.3;
         if (shooter.getPlayerAttribute(PlayerAttributes.THREE_P_SCORING) > 0.65) {
-            //&& League.getInstance().getRandomDouble(0.0, 1.0) <= threePtCutoffPoint
-            simulateThreePointer(shooter);
+            if (threePtCutoffPoint != 0 &&
+                    League.getInstance().getRandomDouble(0.0, 1.0) <= threePtCutoffPoint) {
+                simulateThreePointer(shooter);
+            } else {
+                simulateThreePointer(shooter);
+            }
         } else {
             // Two point shot
             simulateTwoPointer(shooter);
