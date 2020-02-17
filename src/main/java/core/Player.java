@@ -65,6 +65,7 @@ public class Player extends AbstractEntity {
         return (int) ((avg / getEntityAttributes().size()) * 100);
     }
 
+
     /**
      * Returns this players average points per game
      */

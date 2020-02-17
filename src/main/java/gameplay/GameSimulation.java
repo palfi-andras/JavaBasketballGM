@@ -1,5 +1,6 @@
 package gameplay;
 
+import core.Entity;
 import core.League;
 import core.Player;
 import core.PlayerAttributes;
@@ -42,6 +43,9 @@ public class GameSimulation implements Serializable {
     // The rate that random fouls occur (Non-shooting fouls only)
     private static final double FOUL_RATE = 0.05;
     private static final double STEAL_RATE = 0.05;
+    private static final double PERIMETER_BLOCK_RATE = 0.10;
+    private static final double INSIDE_BLOCK_RATE = 0.20;
+    private static final double DEFENSIVE_REBOUND_RATE = 0.75; // There is a 75% chance a def rebound happens vs an off reb
     // Default value for how often turnovers occur
     private static final double TURNOVER_RATE = 0.08;
     // For now we'll assume timeouts get called every 5 minutes
@@ -381,7 +385,7 @@ public class GameSimulation implements Serializable {
      * @param stat   PlayerStat
      * @return int
      */
-    private int getPlayerStat(Player player, PlayerStat stat) {
+    public int getPlayerStat(Player player, PlayerStat stat) {
         return Objects.requireNonNull(getPlayerStats(player)).get(stat);
     }
 
@@ -418,6 +422,16 @@ public class GameSimulation implements Serializable {
     private void incrementTeamStat(Team team, TeamStat stat, int amount) {
         setTeamStat(team, stat,
                 getTeamStat(team, stat) + amount);
+    }
+
+    public int getGameStat(Entity entity, Object gameStat) {
+        assert (gameStat instanceof TeamStat && entity instanceof Team)
+                || (gameStat instanceof PlayerStat && entity instanceof Player);
+        if (entity instanceof Team) {
+            return getTeamStat((Team) entity, (TeamStat) gameStat);
+        } else {
+            return getPlayerStat((Player) entity, (PlayerStat) gameStat);
+        }
     }
 
     /**
@@ -486,6 +500,15 @@ public class GameSimulation implements Serializable {
     public Team getLoser() {
         assert regulationIsOver();
         return (getWinner() == getHomeTeam()) ? getAwayTeam() : getHomeTeam();
+    }
+
+    private List<Player> getSortedPlayersOnCourtBasedOffAttribute(Team t, PlayerAttributes attr) {
+        List<Player> sorted = new LinkedList<>();
+        List<Player> playersOnCourt = (t == getHomeTeam()) ? getHomePlayersOnCourt() : getAwayPlayersOnCourt();
+        for (Player p : t.getSortedRosterBasedOffPlayerAttributes(attr))
+            if (playersOnCourt.contains(p))
+                sorted.add(p);
+        return sorted;
     }
 
     /**
@@ -696,9 +719,11 @@ public class GameSimulation implements Serializable {
         // Three point attempt, increment stats
         incrementTeamStat(getTeamOnOffense(), TeamStat.TEAM_THREE_POINT_ATTEMPTS, 1);
         incrementPlayerStat(shooter, PlayerStat.THREE_POINT_ATTEMPTS, 1);
-        // Check if the shot was made based of thee players three pt attr
+        // Check if the shot was made based of thee players three pt attr. There is also an opportunity that the shot
+        // is blocked before the shot goes up
+        boolean shotBlocked = simulateBlock(true, shooter);
         if (League.getInstance().getRandomDouble(0.0, 1.0)
-                <= shooter.getPlayerAttribute(PlayerAttributes.THREE_P_SCORING)) {
+                <= shooter.getPlayerAttribute(PlayerAttributes.THREE_P_SCORING) && !shotBlocked) {
             // Three point shot made! Increment stats as needed
             System.out.println(shooter.getName() + " has made a three point shot");
             log(String.format("%s has made a three point shot", shooter.getName()));
@@ -709,6 +734,10 @@ public class GameSimulation implements Serializable {
         } else {
             System.out.println(shooter.getName() + " has missed a 3 point shot");
             log(String.format("%s has missed a three point shot", shooter.getName()));
+            // Check to see if the offense grabbed a rebound and can have a new possession
+            boolean offensiveRebound = simulateRebound();
+            if (offensiveRebound)
+                simulateShot();
         }
     }
 
@@ -760,12 +789,17 @@ public class GameSimulation implements Serializable {
                 simulateFreeThrows(getTeamOnDefense(), 2, shooter);
                 return;
             }
-            // Next check if the shot was made
-            if (outcome <= midRangeShotAttr) {
+            // Next check if the shot was made. Also check to see if a block happens
+            boolean blocked = simulateBlock(true, shooter);
+            if (outcome <= midRangeShotAttr && !blocked) {
                 // Player made the shot!
                 // Check to see if an and-one orobability is 5% for mid range shots
                 boolean probabilityAndOne = (League.getInstance().getRandomDouble(0.0, 1.0)) <= 0.05;
                 recordMadeTwoPointer(shooter, probabilityAndOne);
+            } else {
+                boolean offensiveRebound = simulateRebound();
+                if (offensiveRebound)
+                    simulateShot();
             }
         } else {
             // if it was not a shot, then it was either a layup (inside_scoring) or dunk.
@@ -778,11 +812,15 @@ public class GameSimulation implements Serializable {
                     simulateFreeThrows(getTeamOnDefense(), 2, shooter);
                     return;
                 }
-                if (outcome <= dunkAttribute) {
+                boolean blocked = simulateBlock(false, shooter);
+                if (outcome <= dunkAttribute && !blocked) {
                     // Player made the dunk!
                     // Check to see if an and-one, probability is 25% on dunks
                     boolean probabilityAndOne = (League.getInstance().getRandomDouble(0.0, 1.0)) <= 0.25;
                     recordMadeTwoPointer(shooter, probabilityAndOne);
+                } else {
+                    if (simulateRebound())
+                        simulateShot();
                 }
             } else {
                 // Normal layup
@@ -792,11 +830,15 @@ public class GameSimulation implements Serializable {
                     simulateFreeThrows(getTeamOnDefense(), 2, shooter);
                     return;
                 }
-                if (outcome <= insideScoringAttr) {
+                boolean blocked = simulateBlock(false, shooter);
+                if (outcome <= insideScoringAttr && !blocked) {
                     // Player made the layup!
                     // Check to see if an and-one
                     boolean probabilityAndOne = (League.getInstance().getRandomDouble(0.0, 1.0)) <= 0.15;
                     recordMadeTwoPointer(shooter, probabilityAndOne);
+                } else {
+                    if (simulateRebound())
+                        simulateShot();
                 }
             }
         }
@@ -812,6 +854,10 @@ public class GameSimulation implements Serializable {
         int i = League.getInstance().getRandomInteger(0, 4);
         Player shooter = (getTeamOnOffense() == getHomeTeam())
                 ? getHomePlayersOnCourt().get(i) : getAwayPlayersOnCourt().get(i);
+        // Check to see if the shooter has the ball stolen
+        if (simulateSteal(shooter))
+            return; // No shot happens if the ball is stolen
+
         // First we check to see if a 3 pointer can occur
         double playerThreePtPercent;
         double teamThreePtPercent;
@@ -826,7 +872,7 @@ public class GameSimulation implements Serializable {
         }
         double threePtCutoffPoint = (playerThreePtPercent == 0 || teamThreePtPercent == 0) ?
                 0 : ((playerThreePtPercent + teamThreePtPercent) / 0.2) * 0.3;
-        if (shooter.getPlayerAttribute(PlayerAttributes.THREE_P_SCORING) > 0.65) {
+        if (shooter.getPlayerAttribute(PlayerAttributes.THREE_P_SCORING) > 0.85) {
             if (threePtCutoffPoint != 0 &&
                     League.getInstance().getRandomDouble(0.0, 1.0) <= threePtCutoffPoint) {
                 simulateThreePointer(shooter);
@@ -836,6 +882,117 @@ public class GameSimulation implements Serializable {
         } else {
             // Two point shot
             simulateTwoPointer(shooter);
+        }
+    }
+
+    /**
+     * Simulate a block
+     */
+    private boolean simulateBlock(boolean jumpShot, Player shooter) {
+        double decisionPoint = League.getInstance().getRandomDouble(0.0, 1.0);
+        double cutoffPoint = League.getInstance().getRandomDouble(0.0, 1.0);
+        boolean decision;
+        boolean cutoff;
+        int i = League.getInstance().getRandomInteger(0, 4);
+        if (jumpShot) {
+            decision = decisionPoint <= PERIMETER_BLOCK_RATE;
+            if (decision) {
+                Player blockingPlayer = (getTeamOnOffense() == getHomeTeam()) ?
+                        getAwayPlayersOnCourt().get(i) : getHomePlayersOnCourt().get(i);
+                if (blockingPlayer.getPlayerAttribute(PlayerAttributes.PERIMETER_DEFENSE) >= cutoffPoint) {
+                    log(String.format("%s has blocked a jump shot from %s", blockingPlayer, shooter));
+                    incrementTeamStat(getTeamOnDefense(), TeamStat.TEAM_BLK, 1);
+                    incrementPlayerStat(blockingPlayer, PlayerStat.BLK, 1);
+                    return true;
+                }
+            }
+        } else {
+            decision = decisionPoint <= INSIDE_BLOCK_RATE;
+            if (decision) {
+                Player blockingPlayer = (getTeamOnOffense() == getHomeTeam()) ?
+                        getAwayPlayersOnCourt().get(i) : getHomePlayersOnCourt().get(i);
+                if (blockingPlayer.getPlayerAttribute(PlayerAttributes.INSIDE_DEFENSE) >= cutoffPoint) {
+                    log(String.format("%s has blocked a inside shot from %s", blockingPlayer.getName(), shooter.getName()));
+                    incrementTeamStat(getTeamOnDefense(), TeamStat.TEAM_BLK, 1);
+                    incrementPlayerStat(blockingPlayer, PlayerStat.BLK, 1);
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Simulate a steal
+     */
+    private boolean simulateSteal(Player shooter) {
+        // First check to see if a steal occurs
+        if (League.getInstance().getRandomDouble(0.0, 1.0) <= STEAL_RATE) {
+            //Steal will (maybe) occur
+            // Pick a random player to be the stealer
+            int i = League.getInstance().getRandomInteger(0, 4);
+            Player stealer = (getTeamOnOffense() == getHomeTeam()) ? getAwayPlayersOnCourt().get(i) :
+                    getHomePlayersOnCourt().get(i);
+            if (stealer.getPlayerAttribute(PlayerAttributes.PERIMETER_DEFENSE) >= League.getInstance().getRandomDouble(0.0, 1.0)) {
+                log(String.format("%s has stolen the ball from %s", stealer.getName(), shooter.getName()));
+                incrementTeamStat(getTeamOnDefense(), TeamStat.TEAM_STL, 1);
+                incrementPlayerStat(stealer, PlayerStat.STL, 1);
+                incrementTeamStat(getTeamOnOffense(), TeamStat.TEAM_TOV, 1);
+                incrementPlayerStat(shooter, PlayerStat.TOV, 1);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * Simulate a rebound. Returns true if the offensive team gets the ball back
+     *
+     * @return boolean
+     */
+    private boolean simulateRebound() {
+        // Check if it is offensive or defensive rebound. There is much higher chance for a defensive rebound
+        boolean defensiveRebound = League.getInstance().getRandomDouble(0.0, 1.0) <= DEFENSIVE_REBOUND_RATE;
+        // Pick a player to shoot. Taller players have better chance
+        int i = League.getInstance().getRandomInteger(1, 15);
+        // TODO factor in ORB and DRB attributes here
+        List<Player> players = (defensiveRebound) ?
+                getSortedPlayersOnCourtBasedOffAttribute(getTeamOnDefense(), PlayerAttributes.HEIGHT) :
+                getSortedPlayersOnCourtBasedOffAttribute(getTeamOnOffense(),
+                        PlayerAttributes.HEIGHT);
+        Player rebounder;
+        // Pick a player to rebound.
+        if (i <= 5) {
+            // Tallest player
+            rebounder = players.get(0);
+        } else if (6 <= i && i <= 9) {
+            // second
+            rebounder = players.get(1);
+        } else if (10 <= i && i <= 12) {
+            // third
+            rebounder = players.get(2);
+        } else if (i == 13 || i == 14) {
+            // fourth
+            rebounder = players.get(3);
+        } else {
+            // fifth
+            rebounder = players.get(4);
+        }
+        // Increment stats
+        if (defensiveRebound) {
+            // Mark stats for rebound
+            incrementTeamStat(getTeamOnOffense(), TeamStat.TEAM_DRB, 1);
+            incrementPlayerStat(rebounder, PlayerStat.DRB, 1);
+            // log
+            log(String.format("%s has grabbed a defensive rebound", rebounder.getName()));
+            return false;
+        } else {
+            // Mark stats for rebound
+            incrementTeamStat(getTeamOnOffense(), TeamStat.TEAM_ORB, 1);
+            incrementPlayerStat(rebounder, PlayerStat.ORB, 1);
+            // log
+            log(String.format("%s has grabbed an offensive rebound", rebounder.getName()));
+            return true;
         }
     }
 
@@ -872,6 +1029,7 @@ public class GameSimulation implements Serializable {
             simulateFreeThrows(foulingTeam, 2, null);
             return playLength;
         }
+
 
         // If no foul, then just simulate a (potential) shot
         simulateShot();

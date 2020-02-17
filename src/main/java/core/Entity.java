@@ -43,4 +43,5 @@ public interface Entity {
     StatContainer getStatContainer();
 
     void setStatContainer(StatContainer statContainer);
+
 }

@@ -1,14 +1,14 @@
 package application;
 
+import core.Entity;
 import core.League;
 import core.LeagueFunctions;
 import core.Player;
-import core.PlayerAttributes;
 import core.Team;
 import core.Utils;
 import gameplay.GameSimulation;
-import gameplay.PlayerStat;
 import gameplay.TeamStat;
+import javafx.beans.property.ReadOnlyStringWrapper;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.Node;
@@ -17,6 +17,10 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.TableColumn;
+import javafx.scene.control.TableView;
+import javafx.scene.input.MouseButton;
+import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.text.Font;
@@ -26,6 +30,8 @@ import javafx.stage.Stage;
 
 import java.io.File;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -116,8 +122,7 @@ class MainMenuGUI extends AbstractGUI {
 
         // Display game log
         ScrollPane gameLog = new ScrollPane();
-        gameLog.setVmax(200);
-        gameLog.setPrefSize(100, 250);
+        gameLog.setPrefSize(100, 280);
         VBox logs = new VBox(2);
         for (String log : gs.getGameLog()) {
             logs.getChildren().add(getStandardLabel(log));
@@ -126,44 +131,22 @@ class MainMenuGUI extends AbstractGUI {
         game.getChildren().add(getTitleLabel("Game Log"));
         game.getChildren().add(gameLog);
         // Display stats
-        game.getChildren().add(getTitleLabel("Stats"));
         ScrollPane stats = new ScrollPane();
-        stats.setPrefSize(100, 250);
-        stats.setVmax(200);
+        stats.setPrefSize(100, 315);
         VBox statBox = new VBox(4);
         statBox.getChildren().add(getTitleLabel("Team Stats"));
-        HBox teamLabels = new HBox(5, getStandardLabel("            "));
-        HBox homeTeam = new HBox(5, getBoldLabel(gs.getHomeTeam().getName()));
-        HBox awayTeam = new HBox(5, getBoldLabel(gs.getAwayTeam().getName()));
-        for (TeamStat stat : TeamStat.values()) {
-            teamLabels.getChildren().add(getBoldLabel(stat.toString()));
-            homeTeam.getChildren().add(getStandardLabel(String.valueOf(gs.getHomeTeamStat(stat))));
-            awayTeam.getChildren().add(getStandardLabel(String.valueOf(gs.getAwayTeamStat(stat))));
-        }
-        statBox.getChildren().add(teamLabels);
-        statBox.getChildren().add(homeTeam);
-        statBox.getChildren().add(awayTeam);
-        statBox.getChildren().add(getTitleLabel("Player Stats"));
-        HBox homeLabels = new HBox(5, getBoldLabel(gs.getHomeTeam().getName()));
-        HBox awayLabels = new HBox(5, getBoldLabel(gs.getAwayTeam().getName()));
-        for (PlayerStat stat : PlayerStat.values()) {
-            homeLabels.getChildren().add(getBoldLabel(stat.toString()));
-        }
-        statBox.getChildren().add(homeLabels);
-        for (Player p : gs.getHomeTeam().getRankedRoster()) {
-            HBox playerBox = new HBox(5, getBoldLabel(p.getName()));
-            for (int val : gs.getPlayerStats(p).values()) {
-                playerBox.getChildren().add(getStandardLabel(String.valueOf(val)));
-            }
-            statBox.getChildren().add(playerBox);
-        }
-        statBox.getChildren().add(awayLabels);
-        for (Player p : gs.getHomeTeam().getRankedRoster()) {
-            HBox playerBox = new HBox(5, getBoldLabel(p.getName()));
-            for (int val : gs.getPlayerStats(p).values())
-                playerBox.getChildren().add(getStandardLabel(String.valueOf(val)));
-            statBox.getChildren().add(playerBox);
-        }
+        TableView<Entity> teamStats = Utils.createGameSimulationTeamStatTable(gs);
+        teamStats.setPrefHeight(180);
+        statBox.getChildren().add(teamStats);
+
+        TableView<Entity> homePlayers = Utils.createGameSimulationPlayerStatTable(gs, gs.getHomeTeam().getRoster());
+        homePlayers.setPrefHeight(300);
+        TableView<Entity> awayPlayers = Utils.createGameSimulationPlayerStatTable(gs, gs.getAwayTeam().getRoster());
+        awayPlayers.setPrefHeight(300);
+        statBox.getChildren().add(getTitleLabel("Home Player Stats"));
+        statBox.getChildren().add(homePlayers);
+        statBox.getChildren().add(getTitleLabel("Away Player Stats"));
+        statBox.getChildren().add(awayPlayers);
         stats.setContent(statBox);
         game.getChildren().add(stats);
         return game;
@@ -259,7 +242,30 @@ class MainMenuGUI extends AbstractGUI {
             setupPlayerButton(p, button);
             vbox.getChildren().add(button);
         }
+        vbox.getChildren().add(getBoldLabel("\n\n"));
+        Button teamInfo = new Button("Team Info");
+        teamInfoButton(teamInfo);
+        vbox.getChildren().add(teamInfo);
         getRootPane().setLeft(vbox);
+    }
+
+    private void teamInfoButton(Button b) {
+        b.setOnAction(e -> {
+            List<Entity> players = new LinkedList<Entity>(getUserTeam().getRoster());
+            VBox box = new VBox(5);
+            box.getChildren().add(getTitleLabel("Average Team Stats"));
+            TableView<Entity> avgStatsTable = Utils.createEntityAvgStatsTable(players);
+            avgStatsTable.setOnMouseClicked((MouseEvent event) -> {
+                if (event.getButton().equals(MouseButton.PRIMARY) && event.getClickCount() == 2) {
+                    getRootPane().setCenter(createPlayerBox(
+                            (Player) avgStatsTable.getSelectionModel().getSelectedItem()));
+                }
+            });
+            box.getChildren().add(avgStatsTable);
+            box.getChildren().add(new HBox(5, getTitleLabel("Overall Team Rating"),
+                    getBoldLabel(String.valueOf(getUserTeam().getOverallTeamRating()))));
+            getRootPane().setCenter(box);
+        });
     }
 
     /**
@@ -268,33 +274,28 @@ class MainMenuGUI extends AbstractGUI {
      */
     private void setupPlayerButton(Player p, Button b) {
         b.setOnAction(e -> {
-            VBox playerBox = new VBox(3);
-            playerBox.getChildren().add(getTitleLabel(p.getName()));
-            playerBox.getChildren().add(new HBox(10, getBoldLabel("Overall Rating: "),
-                    getStandardLabel(String.valueOf(p.getOverallPlayerRating()))));
-            playerBox.getChildren().add(getTitleLabel("\nPlayer Attributes"));
-            for (PlayerAttributes attr : PlayerAttributes.values()) {
-                playerBox.getChildren().add(new HBox(10,
-                        getBoldLabel(attr.toString()),
-                        getStandardLabel(String.valueOf(p.getPlayerAttribute(attr)))));
-            }
-            playerBox.getChildren().add(getTitleLabel("Average Statistics"));
-            if (LeagueFunctions.teamHasNotPlayedGames(getUserTeam())) {
-                playerBox.getChildren().add(getBoldLabel("Team has not yet played any games"));
-            } else {
-                ScrollPane pane = new ScrollPane();
-                pane.setVmax(350);
-                VBox stats = new VBox(5);
-                for (PlayerStat stat : PlayerStat.values()) {
-                    stats.getChildren().add(new HBox(10,
-                            getBoldLabel(stat.toString()),
-                            getStandardLabel(String.valueOf(p.getStatContainer().getAvgValueOfStat(stat)))));
-                }
-                pane.setContent(stats);
-                playerBox.getChildren().add(pane);
-            }
-            getRootPane().setCenter(playerBox);
+            getRootPane().setCenter(createPlayerBox(p));
         });
+    }
+
+    private VBox createPlayerBox(Player p) {
+        VBox playerBox = new VBox(5);
+        playerBox.getChildren().add(getTitleLabel(p.getName()));
+        playerBox.getChildren().add(new HBox(10, getBoldLabel("Overall Rating: "),
+                getStandardLabel(String.valueOf(p.getOverallPlayerRating()))));
+        playerBox.getChildren().add(getTitleLabel("Player Attributes"));
+        TableView<Entity> attrTable = Utils.createEntityAttributeTable(p);
+        attrTable.setPrefHeight(150);
+        playerBox.getChildren().add(attrTable);
+        playerBox.getChildren().add(getTitleLabel("Average Statistics"));
+        if (LeagueFunctions.teamHasNotPlayedGames(getUserTeam())) {
+            playerBox.getChildren().add(getBoldLabel("Team has not yet played any games"));
+        } else {
+            TableView<Entity> statTable = Utils.createEntityAvgStatsTable(p);
+            statTable.setPrefHeight(150);
+            playerBox.getChildren().add(statTable);
+        }
+        return playerBox;
     }
 
     /**
@@ -366,5 +367,11 @@ class MainMenuGUI extends AbstractGUI {
 
     private Label getLabel(String label) {
         return new Label(label);
+    }
+
+    private TableColumn<String, String> getTableColumn(String name) {
+        TableColumn<String, String> col = new TableColumn<>(name);
+        col.setCellValueFactory(param -> new ReadOnlyStringWrapper(param.getValue()));
+        return col;
     }
 }

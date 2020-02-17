@@ -508,7 +508,7 @@ public class League extends AbstractEntity {
     }
 
     public double getRandomDouble() {
-        return getRandomDouble(0.1, 1);
+        return getRandomDouble(0.4, 1);
     }
 
     public double getRandomDouble(int low, int high) {
