@@ -48,6 +48,7 @@ public class GameSimulation implements Serializable {
     private static final double DEFENSIVE_REBOUND_RATE = 0.75; // There is a 75% chance a def rebound happens vs an off reb
     // Default value for how often turnovers occur
     private static final double TURNOVER_RATE = 0.08;
+    private static final double ASSIST_RATE = 0.57;
     // For now we'll assume timeouts get called every 5 minutes
     private static final int TIMEOUT_INTERVAL = 300;
 
@@ -723,7 +724,8 @@ public class GameSimulation implements Serializable {
         // is blocked before the shot goes up
         boolean shotBlocked = simulateBlock(true, shooter);
         if (League.getInstance().getRandomDouble(0.0, 1.0)
-                <= shooter.getPlayerAttribute(PlayerAttributes.THREE_P_SCORING) && !shotBlocked) {
+                <= (shooter.getPlayerAttribute(PlayerAttributes.THREE_P_SCORING) * 0.5) && !shotBlocked) {
+            simulateAssist();
             // Three point shot made! Increment stats as needed
             System.out.println(shooter.getName() + " has made a three point shot");
             log(String.format("%s has made a three point shot", shooter.getName()));
@@ -792,6 +794,8 @@ public class GameSimulation implements Serializable {
             // Next check if the shot was made. Also check to see if a block happens
             boolean blocked = simulateBlock(true, shooter);
             if (outcome <= midRangeShotAttr && !blocked) {
+                // check to see if the shot is assisted
+                simulateAssist();
                 // Player made the shot!
                 // Check to see if an and-one orobability is 5% for mid range shots
                 boolean probabilityAndOne = (League.getInstance().getRandomDouble(0.0, 1.0)) <= 0.05;
@@ -814,6 +818,7 @@ public class GameSimulation implements Serializable {
                 }
                 boolean blocked = simulateBlock(false, shooter);
                 if (outcome <= dunkAttribute && !blocked) {
+                    simulateAssist();
                     // Player made the dunk!
                     // Check to see if an and-one, probability is 25% on dunks
                     boolean probabilityAndOne = (League.getInstance().getRandomDouble(0.0, 1.0)) <= 0.25;
@@ -832,6 +837,7 @@ public class GameSimulation implements Serializable {
                 }
                 boolean blocked = simulateBlock(false, shooter);
                 if (outcome <= insideScoringAttr && !blocked) {
+                    simulateAssist();
                     // Player made the layup!
                     // Check to see if an and-one
                     boolean probabilityAndOne = (League.getInstance().getRandomDouble(0.0, 1.0)) <= 0.15;
@@ -892,7 +898,6 @@ public class GameSimulation implements Serializable {
         double decisionPoint = League.getInstance().getRandomDouble(0.0, 1.0);
         double cutoffPoint = League.getInstance().getRandomDouble(0.0, 1.0);
         boolean decision;
-        boolean cutoff;
         int i = League.getInstance().getRandomInteger(0, 4);
         if (jumpShot) {
             decision = decisionPoint <= PERIMETER_BLOCK_RATE;
@@ -900,7 +905,7 @@ public class GameSimulation implements Serializable {
                 Player blockingPlayer = (getTeamOnOffense() == getHomeTeam()) ?
                         getAwayPlayersOnCourt().get(i) : getHomePlayersOnCourt().get(i);
                 if (blockingPlayer.getPlayerAttribute(PlayerAttributes.PERIMETER_DEFENSE) >= cutoffPoint) {
-                    log(String.format("%s has blocked a jump shot from %s", blockingPlayer, shooter));
+                    log(String.format("%s has blocked a jump shot from %s", blockingPlayer.getName(), shooter.getName()));
                     incrementTeamStat(getTeamOnDefense(), TeamStat.TEAM_BLK, 1);
                     incrementPlayerStat(blockingPlayer, PlayerStat.BLK, 1);
                     return true;
@@ -946,6 +951,38 @@ public class GameSimulation implements Serializable {
     }
 
     /**
+     * Checks to see if this shot attempt will come off of an assist. Currently there is a 57% chance that any shot that
+     * is going in comes off an assist. The teams best assisters have the higher chance of making the assist.
+     */
+    private void simulateAssist() {
+        boolean assistHappens = League.getInstance().getRandomDouble(0.0, 1.0) <= ASSIST_RATE;
+        if (!assistHappens)
+            return;
+        int i = League.getInstance().getRandomInteger(1, 15);
+        List<Player> players = getSortedPlayersOnCourtBasedOffAttribute(getTeamOnOffense(), PlayerAttributes.ASSIST);
+        Player assister;
+        if (i <= 5) {
+            // Tallest player
+            assister = players.get(0);
+        } else if (6 <= i && i <= 9) {
+            // second
+            assister = players.get(1);
+        } else if (10 <= i && i <= 12) {
+            // third
+            assister = players.get(2);
+        } else if (i == 13 || i == 14) {
+            // fourth
+            assister = players.get(3);
+        } else {
+            // fifth
+            assister = players.get(4);
+        }
+        // Increment stats
+        incrementTeamStat(getTeamOnOffense(), TeamStat.TEAM_ASSIST, 1);
+        incrementPlayerStat(assister, PlayerStat.ASSIST, 1);
+    }
+
+    /**
      * Simulate a rebound. Returns true if the offensive team gets the ball back
      *
      * @return boolean
@@ -958,8 +995,7 @@ public class GameSimulation implements Serializable {
         // TODO factor in ORB and DRB attributes here
         List<Player> players = (defensiveRebound) ?
                 getSortedPlayersOnCourtBasedOffAttribute(getTeamOnDefense(), PlayerAttributes.HEIGHT) :
-                getSortedPlayersOnCourtBasedOffAttribute(getTeamOnOffense(),
-                        PlayerAttributes.HEIGHT);
+                getSortedPlayersOnCourtBasedOffAttribute(getTeamOnOffense(), PlayerAttributes.HEIGHT);
         Player rebounder;
         // Pick a player to rebound.
         if (i <= 5) {

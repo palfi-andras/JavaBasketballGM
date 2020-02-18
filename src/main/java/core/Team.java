@@ -1,5 +1,6 @@
 package core;
 
+import gameplay.PlayerStat;
 import gameplay.StatContainer;
 import gameplay.TeamStat;
 import org.json.simple.JSONArray;
@@ -87,15 +88,24 @@ public class Team extends AbstractEntity {
         for (Player p : getRoster()) {
             sortedRoster.add(new AbstractMap.SimpleEntry<>(p, p.getPlayerAttribute(attr)));
         }
-        Collections.sort(sortedRoster, new Comparator<Map.Entry<Player, Double>>() {
-            public int compare(Map.Entry<Player, Double> o1, Map.Entry<Player, Double> o2) {
-                return (o1.getValue()).compareTo(o2.getValue());
-            }
-        });
+        Collections.sort(sortedRoster, Comparator.comparing(Map.Entry::getValue));
         List<Player> sorted = new LinkedList<>();
         for (Map.Entry<Player, Double> entry : sortedRoster) {
             sorted.add(entry.getKey());
         }
+        Collections.reverse(sorted);
+        return sorted;
+    }
+
+    public List<Player> getSortedRosterBasedOffPlayerAvgStats(PlayerStat stat) {
+        List<Map.Entry<Player, Integer>> sortedRoster = new LinkedList<>();
+        for (Player p : getRoster())
+            sortedRoster.add(new AbstractMap.SimpleEntry<>
+                    (p, (Integer) p.getStatContainer().getAvgValueOfStat(stat)));
+        Collections.sort(sortedRoster, Comparator.comparingInt(Map.Entry::getValue));
+        List<Player> sorted = new LinkedList<>();
+        for (Map.Entry<Player, Integer> entry : sortedRoster)
+            sorted.add(entry.getKey());
         Collections.reverse(sorted);
         return sorted;
     }
@@ -153,8 +163,4 @@ public class Team extends AbstractEntity {
         return getJSONObject().toString();
     }
 
-    @Override
-    public String toString() {
-        return "Team Location: " + getName() + "\n" + super.toString();
-    }
 }

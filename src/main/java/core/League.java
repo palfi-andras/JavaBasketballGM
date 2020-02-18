@@ -39,7 +39,7 @@ public class League extends AbstractEntity {
     // Number of teams in the league
     public static final int NUM_TEAMS = 10;
     // Roster size
-    private static final int PLAYERS_PER_TEAM = 15;
+    public static final int PLAYERS_PER_TEAM = 15;
     // Number of players in the league is equal to the full roster size of each team + 100 extra free agents
     public static final int NUM_PLAYERS = (NUM_TEAMS * PLAYERS_PER_TEAM) + 100;
 
@@ -263,6 +263,10 @@ public class League extends AbstractEntity {
         }
         for (int p : getPlayerEntityIndexes())
             initializeAttributes(getEntities().get(p));
+        for (int t : getTeamEntityIndexes()) {
+            for (TeamAttributes attr : TeamAttributes.values())
+                getEntities().get(t).setEntityAttribute(attr.toString(), 0.0);
+        }
     }
 
     /**
@@ -271,7 +275,7 @@ public class League extends AbstractEntity {
      *
      * @param entity the entity the intitialze
      */
-    private void initializeAttributes(AbstractEntity entity) {
+    void initializeAttributes(AbstractEntity entity) {
         if (entity instanceof Player)
             for (PlayerAttributes attr : PlayerAttributes.values()) {
                 if (attr == PlayerAttributes.ENERGY) {
@@ -300,7 +304,6 @@ public class League extends AbstractEntity {
         while (!draftIsOver()) {
             for (int t : teamIndexes) {
                 Player p = (Player) getEntities().get(sortedPlayerIndexes.remove(0));
-                Team team = (Team) getEntities().get(t);
                 ((Team) getEntities().get(t)).addPlayerToRoster(p);
             }
         }
@@ -311,7 +314,7 @@ public class League extends AbstractEntity {
     /**
      * @return true when the draft is over, i.e. each team has a full roster
      */
-    private boolean draftIsOver() {
+    public boolean draftIsOver() {
         for (int t : getTeamEntityIndexes()) {
             Team team = (Team) getEntities().get(t);
             if (team.getRosterSize() < PLAYERS_PER_TEAM)

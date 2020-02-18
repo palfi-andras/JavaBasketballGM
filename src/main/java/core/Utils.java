@@ -4,8 +4,11 @@ import gameplay.GameSimulation;
 import gameplay.PlayerStat;
 import gameplay.TeamStat;
 import javafx.beans.property.ReadOnlyObjectWrapper;
+import javafx.scene.control.Label;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import javafx.scene.text.Font;
+import javafx.scene.text.FontWeight;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
@@ -22,6 +25,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
@@ -169,12 +173,16 @@ public class Utils {
     public static TableView<GameSimulation> createScheduleTable(Team team) {
         TableView<GameSimulation> scheduleTable = new TableView<>();
         scheduleTable.setEditable(false);
+        scheduleTable.setPrefHeight(600);
         TableColumn<GameSimulation, Integer> idCol = new TableColumn<>("ID");
+        idCol.prefWidthProperty().bind(scheduleTable.widthProperty().multiply(0.2));
         idCol.setCellValueFactory(e -> new ReadOnlyObjectWrapper<>(e.getValue().getId()));
         TableColumn<GameSimulation, String> homeTeamCol = new TableColumn<>("Home Team");
         homeTeamCol.setCellValueFactory(e -> new ReadOnlyObjectWrapper<>(e.getValue().getHomeTeam().getName()));
+        homeTeamCol.prefWidthProperty().bind(scheduleTable.widthProperty().multiply(0.4));
         TableColumn<GameSimulation, String> awayTeamCol = new TableColumn<>("Away Team");
         awayTeamCol.setCellValueFactory(e -> new ReadOnlyObjectWrapper<>(e.getValue().getAwayTeam().getName()));
+        awayTeamCol.prefWidthProperty().bind(scheduleTable.widthProperty().multiply(0.4));
         scheduleTable.getColumns().addAll(idCol, homeTeamCol, awayTeamCol);
         scheduleTable.getItems().addAll(LeagueFunctions.getGamesForTeam(team));
         return scheduleTable;
@@ -210,14 +218,13 @@ public class Utils {
         return col;
     }
 
-    public static TableView<Entity> createEntityAttributeTable(List<Entity> entities) {
+    public static TableView<Entity> createEntityAttributeTable(List<Entity> entities, EntityType type) {
         assert entities.size() > 0;
         TableView<Entity> entityTableView = createEntityTable();
-        Entity e = entities.get(0);
-        if (e instanceof Player) {
+        if (type == EntityType.PLAYER) {
             for (PlayerAttributes attr : PlayerAttributes.values())
                 entityTableView.getColumns().add(createEntityAttrTableColumn(attr.toString()));
-        } else if (e instanceof Team)
+        } else if (type == EntityType.TEAM)
             for (TeamAttributes attr : TeamAttributes.values())
                 entityTableView.getColumns().add(createEntityAttrTableColumn(attr.toString()));
         else
@@ -226,10 +233,10 @@ public class Utils {
         return entityTableView;
     }
 
-    public static TableView<Entity> createEntityAttributeTable(Entity entity) {
+    public static TableView<Entity> createEntityAttributeTable(Entity entity, EntityType type) {
         List<Entity> entities = new ArrayList<>();
         entities.add(entity);
-        return createEntityAttributeTable(entities);
+        return createEntityAttributeTable(entities, type);
     }
 
     public static TableView<Entity> createEntityAvgStatsTable(List<Entity> entities) {
@@ -270,6 +277,48 @@ public class Utils {
         return playerStats;
     }
 
+    public static TableView<Entity> createRosterTableForTeam(Team team) {
+        TableView<Entity> rosterTable = createEntityTable();
+        rosterTable.getColumns().remove(1);
+        TableColumn<Entity, Integer> overallColl = new TableColumn<>("Overall Rating");
+        overallColl.setCellValueFactory(e -> new ReadOnlyObjectWrapper<>(
+                ((Player) e.getValue()).getOverallPlayerRating()
+        ));
+        rosterTable.getColumns().add(overallColl);
+        rosterTable.getItems().addAll(team.getRankedRoster());
+        return rosterTable;
+    }
+
+    public static TableView<Entity> createDraftTable() {
+        List<Entity> freeAgents = new LinkedList<>(LeagueFunctions.getFreeAgents());
+        TableView<Entity> playersTable = createEntityAttributeTable(freeAgents, EntityType.PLAYER);
+        TableColumn<Entity, Integer> ovr = new TableColumn<>("Overall Rating");
+        ovr.setCellValueFactory(e -> new ReadOnlyObjectWrapper<>(((Player) e.getValue()).getOverallPlayerRating()));
+        playersTable.getColumns().add(2, ovr);
+        return playersTable;
+    }
+
+    public static Label getTitleLabel(String label) {
+        Label l = getLabel(label);
+        l.setFont(Font.font("Arial", FontWeight.BOLD, 24));
+        return l;
+    }
+
+    public static Label getBoldLabel(String label) {
+        Label l = getLabel(label);
+        l.setFont(Font.font("Arial", FontWeight.BOLD, 14));
+        return l;
+    }
+
+    public static Label getStandardLabel(String label) {
+        Label l = getLabel(label);
+        l.setFont(Font.font("Arial", FontWeight.NORMAL, 14));
+        return l;
+    }
+
+    public static Label getLabel(String label) {
+        return new Label(label);
+    }
 
     // A custom exception to be used when trying to load a previous League from a json file. The most common usages of
     // this exception should be when a league is loaded and the entity that is being loaded does not have all of its

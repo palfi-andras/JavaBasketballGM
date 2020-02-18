@@ -156,7 +156,7 @@ public class AbstractEntity implements Entity, Serializable {
 
     @Override
     public String toString() {
-        return "ID: " + getID();
+        return getName();
     }
 
 

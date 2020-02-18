@@ -9,6 +9,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.Label;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.text.Font;
 import javafx.stage.FileChooser;
@@ -23,7 +24,8 @@ class RootGUI extends AbstractGUI {
         super();
         Label label = new Label("Welcome to JavaBasketballGM! ");
         label.setFont(Font.font("Arial", 24));
-        label.setPadding(new Insets(10, 220, 10, 220));
+        label.setPadding(new Insets(10, 0, 10, 0));
+        label.setAlignment(Pos.TOP_CENTER);
         Button newL = new Button("New League");
         newL.setOnAction(e -> {
             NewLeagueGUI newLeagueGUI = new NewLeagueGUI(primaryStage);
@@ -52,8 +54,10 @@ class RootGUI extends AbstractGUI {
         hBox.setPadding(new Insets(10, 10, 10, 10));
         getRootPane().setTop(label);
         getRootPane().setBottom(hBox);
-        Scene scene = new Scene(getRootPane(), 950, 850);
+        Scene scene = new Scene(getRootPane(), 1050, 850);
         primaryStage.setTitle("Java Basketball GM");
+        BorderPane.setAlignment(getRootPane().getTop(), Pos.TOP_CENTER);
+        BorderPane.setAlignment(getRootPane().getBottom(), Pos.BASELINE_CENTER);
         primaryStage.setScene(scene);
         primaryStage.show();
     }
