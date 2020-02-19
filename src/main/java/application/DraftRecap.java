@@ -8,7 +8,7 @@ import javafx.scene.control.Button;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
-public class DraftRecap extends AbstractGUI {
+class DraftRecap extends AbstractGUI {
 
     DraftRecap(Stage primaryStage, Team userTeam, Draft draft) {
         super();

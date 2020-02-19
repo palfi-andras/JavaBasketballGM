@@ -29,10 +29,22 @@ import javafx.stage.Stage;
 
 import java.util.Optional;
 
+/**
+ * CS 622
+ * DraftGUI.java
+ * THe DraftGUI class implements the Draft GUI of the JavaBasketballGM. This class is responsible for facilitating the
+ * draft process for the user
+ *
+ * @author apalfi
+ * @version 1.0
+ */
 class DraftGUI extends AbstractGUI {
 
+    // The users team
     private Team userTeam;
+    // Initialize a draft process
     private Draft draft = new Draft();
+    // The team currently picking at this point in the draft
     private Team nowPicking = draft.getCurrentTeam();
     private Stage primaryStage;
 
@@ -45,6 +57,9 @@ class DraftGUI extends AbstractGUI {
         refresh();
     }
 
+    /**
+     * Refresh the entire view
+     */
     private void refresh() {
         setRight();
         setLeft();
@@ -52,15 +67,22 @@ class DraftGUI extends AbstractGUI {
         setCenter();
     }
 
+    /**
+     * Sets the left portion of the DraftGUI which shows a table of the users current roster, some buttons to simulate
+     * the process, and also a view of the draft order
+     */
     private void setLeft() {
         // set the roster at the left
         VBox box = new VBox(8, Utils.getBoldLabel(String.format("%s Roster", userTeam.getName())));
+        // Add the roster table
         box.getChildren().add(Utils.createRosterTableForTeam(userTeam));
         box.getChildren().add(new Separator(Orientation.HORIZONTAL));
         box.getChildren().add(Utils.getBoldLabel(String.format("Now Picking: %s", nowPicking.getName())));
+        // Add a button to simulate pick
         Button simulatePick = new Button("Simulate This Pick");
         simulatePick.setOnAction(e -> {
             if (userTeam == nowPicking) {
+                // If this is the users team, make sure they really want to sim
                 Alert alert = new Alert(Alert.AlertType.WARNING, "Are you sure you want to simulate your " +
                         "teams own pick? The best overall player will be drafted", ButtonType.NO, ButtonType.YES);
                 alert.setHeaderText("Simulating your pick...");
@@ -73,6 +95,7 @@ class DraftGUI extends AbstractGUI {
         });
         box.getChildren().add(simulatePick);
         if (userTeam != nowPicking) {
+            // Adds a button that alows the user to simulate to their next pick
             Button simulateToNextUserPick = new Button("Simulate to next User Pick");
             simulateToNextUserPick.setOnAction(e -> {
                 while (nowPicking != userTeam)
@@ -82,6 +105,9 @@ class DraftGUI extends AbstractGUI {
             box.getChildren().add(simulateToNextUserPick);
         }
         box.getChildren().add(new Separator(Orientation.HORIZONTAL));
+        /*
+        Now add a Table that shows the draft order. We also set a cell value factory to highlight the current teams pick
+         */
         box.getChildren().add(Utils.getBoldLabel("Draft Order"));
         TableView<Entity> order = draft.createDraftOrderTable();
         TableColumn<Entity, String> nameCol = (TableColumn<Entity, String>) order.getColumns().get(0);
@@ -110,6 +136,14 @@ class DraftGUI extends AbstractGUI {
 
     }
 
+    /**
+     * Performs a draft action in the context of this GUI. If the user has already finished drafting their team, it
+     * will just sim the rest of the draft. Also increments the currentTeam drafting to the next picl.
+     *
+     * @param p       Player: THe player being drafted
+     * @param t       Team: The team drafting the player
+     * @param refresh boolean: If set to true, will reload the DraftGUI.
+     */
     private void performDraftAction(Player p, Team t, boolean refresh) {
         if (LeagueFunctions.getRosterSize(userTeam) == League.PLAYERS_PER_TEAM) {
             while (!draft.draftIsDone()) {
@@ -129,18 +163,28 @@ class DraftGUI extends AbstractGUI {
         }
     }
 
+    /**
+     * Sets up the next Scene, which is the DraftRecap view.
+     */
     private void setupNextScene() {
         DraftRecap draftRecap = new DraftRecap(primaryStage, userTeam, draft);
         primaryStage.getScene().setRoot(draftRecap.getRootPane());
     }
 
 
+    /**
+     * Set the bottom portion of the view, which is a label of how many players the team has drafted thus far in the draft
+     */
     private void setBottom() {
         getRootPane().setBottom(Utils.getTitleLabel(String.format("Team Size: %d/%d",
                 LeagueFunctions.getRosterSize(userTeam), League.PLAYERS_PER_TEAM)));
         BorderPane.setAlignment(getRootPane().getBottom(), Pos.CENTER);
     }
 
+    /**
+     * Sets the right portion of the view, which shows information that the user may find helpful while drafting.
+     * Adds a table of  a teams average attributes, along with average team overall ratings versus the league average.
+     */
     private void setRight() {
         VBox box = new VBox(8,
                 Utils.getTitleLabel("Team Needs"));
@@ -175,13 +219,20 @@ class DraftGUI extends AbstractGUI {
     }
 
 
+    /**
+     * The center view is the main content area of this screen. It shows a table of free agents that are avaiable to draft.
+     * It also shows a table of players that have already been drafted
+     */
     private void setCenter() {
         VBox box = new VBox(5, Utils.getBoldLabel("Draft Board"), Utils.getStandardLabel("Double click a " +
                 "player to draft them to your team"),
                 Utils.getStandardLabel("Tip: Double-clicking a column header allows you to sort based off any attribute"));
         box.setPadding(new Insets(0, 10, 0, 10));
+        // Create the table of free agents
         TableView<Entity> draftBoard = Utils.createDraftTable();
         draftBoard.setPrefHeight(550);
+        // Set a mouse event when a user double clicks on a free agent, to have the option to draft them. Will ask for
+        // confirmation before actually executing the draft. Will also show an error if the user is not currently drafting
         draftBoard.setOnMouseClicked((MouseEvent event) -> {
             if (event.getButton().equals(MouseButton.PRIMARY) && event.getClickCount() == 2) {
                 Player selectedPlayer = (Player) draftBoard.getSelectionModel().getSelectedItem();
@@ -206,6 +257,7 @@ class DraftGUI extends AbstractGUI {
             }
         });
         box.getChildren().add(draftBoard);
+        // Add a table of already drafted players in this draft
         box.getChildren().addAll(Utils.getBoldLabel("Draft Recap"));
         ScrollPane pane = new ScrollPane();
         pane.setContent(draft.createDraftRecapTable());

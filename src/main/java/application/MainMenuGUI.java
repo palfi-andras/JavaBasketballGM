@@ -26,18 +26,25 @@ import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
 import java.io.File;
-import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 
+/**
+ * CS622
+ * MainMenuGUI.java
+ * This class implements the "MainMenu" or Main View of this program. This is the view presented to the user once their
+ * team is fully drafted and ready to start playing games.
+ *
+ * @author apalfi
+ * @version 1.0
+ */
 class MainMenuGUI extends AbstractGUI {
 
+    // The users team
     private final Team userTeam;
     private final Stage primaryStage;
-    private Map<GameSimulation, VBox> gameBoxScores = new LinkedHashMap<>();
 
     MainMenuGUI(Stage primaryStage, Team userTeam) {
         super();
@@ -60,12 +67,16 @@ class MainMenuGUI extends AbstractGUI {
         scheduleBox.getChildren().add(Utils.getBoldLabel("Team Schedule"));
         scheduleBox.getChildren().addAll(Utils.getStandardLabel("Click Game Row to view more info and simulate game"));
         TableView<GameSimulation> teamSchedule = Utils.createScheduleTable(getUserTeam());
+        // Set an event that brings up the Game View if a user clicks on one of the games in this table. From here
+        // they will be able to start the game.
         teamSchedule.setOnMouseClicked((MouseEvent event) -> {
             if (event.getButton().equals(MouseButton.PRIMARY) && event.getClickCount() == 2) {
                 getRootPane().setCenter(createGameVBox(teamSchedule.getSelectionModel().getSelectedItem()));
             }
         });
+        // Add team schedule
         scheduleBox.getChildren().add(teamSchedule);
+        // Create a button that allows the user to set up more games
         Button scheduleMoreGames = new Button("Schedule More Games");
         scheduleMoreGames.setOnAction(e -> {
             League.getInstance().setupRoundRobinTournament();
@@ -80,20 +91,31 @@ class MainMenuGUI extends AbstractGUI {
     }
 
 
+    /**
+     * This method creates a view that should be used in the center pane of this screen. It is the view presented
+     * to a user when simulating a game.
+     *
+     * @param gs GameSimulation: The game that the user wants to see info about, or simulate
+     * @return VBox: The GUI elements compromising this game
+     */
     private VBox createGameVBox(GameSimulation gs) {
         VBox game = new VBox(3);
+        // First add labels for team names
         game.getChildren().add(new HBox(180,
                 Utils.getTitleLabel(String.format("Home: %s", gs.getHomeTeam().getName())),
                 Utils.getTitleLabel(String.format("Away: %s", gs.getAwayTeam().getName()))));
         game.getChildren().add(Utils.getStandardLabel("\n\n"));
+        // Add lables for team ovr ratings
         game.getChildren().add(new HBox(180,
                 Utils.getTitleLabel(String.valueOf(Utils.round(gs.getHomeTeam().getOverallTeamRating(), 3))),
                 Utils.getBoldLabel("Overall Rating"),
                 Utils.getTitleLabel(String.valueOf(Utils.round(gs.getAwayTeam().getOverallTeamRating(), 3)))));
         game.getChildren().add(Utils.getStandardLabel("\n\n"));
+        // Add labels for the score
         game.getChildren().add(new HBox(180,
                 Utils.getTitleLabel(String.valueOf(gs.getHomeTeamStat(TeamStat.TEAM_PTS))), Utils.getBoldLabel("Score"),
                 Utils.getTitleLabel(String.valueOf(gs.getAwayTeamStat(TeamStat.TEAM_PTS)))));
+        // Add a button to play the game represented by this view
         Button playGame = new Button("Play Game");
         playButtonAction(gs, playGame);
         game.getChildren().add(playGame);
@@ -130,8 +152,16 @@ class MainMenuGUI extends AbstractGUI {
         return game;
     }
 
+    /**
+     * Configures the action for the Play Game button. Will do some checking to see if the user is currently scheduled
+     * to play this game or not.
+     *
+     * @param gs GameSimulation: the game to be played
+     * @param b  Button: the button to set the action for
+     */
     private void playButtonAction(GameSimulation gs, Button b) {
         b.setOnAction(e -> {
+            // If the game is already over, then show an error
             if (gs.gameIsOver()) {
                 Alert over = new Alert(Alert.AlertType.ERROR);
                 over.setTitle("Error!");
@@ -139,6 +169,7 @@ class MainMenuGUI extends AbstractGUI {
                 over.showAndWait();
                 return;
             }
+            // If the user has a game scheduled before this one, show an error
             if (gs != LeagueFunctions.getNextGameForTeam(getUserTeam())) {
                 Alert notNextGame = new Alert(Alert.AlertType.ERROR);
                 notNextGame.setTitle("Error!");
@@ -146,6 +177,8 @@ class MainMenuGUI extends AbstractGUI {
                 notNextGame.setContentText("There is another game in the queue that is scheduled earlier");
                 notNextGame.showAndWait();
             } else {
+                // Else, simulate this game (along with any other games that do not belong to the user and happen in the
+                // same time period.
                 for (GameSimulation game : LeagueFunctions.getAllGames()) {
                     if (game.gameIsOver())
                         continue;
@@ -166,30 +199,8 @@ class MainMenuGUI extends AbstractGUI {
 
 
     /**
-     * Opens the game simulation screen
-     */
-    private void simulateNextGameButton(Button b) {
-        b.setOnAction(e -> {
-            for (GameSimulation gs : LeagueFunctions.getAllGames()) {
-                if (gs.gameIsOver())
-                    continue;
-                if (LeagueFunctions.getGamesForTeam(getUserTeam()).contains(gs)) {
-                    // Sim game
-                    LeagueFunctions.simulateGame(gs);
-                    // Update team record
-                    updateRecord();
-                    getRootPane().setCenter(createGameVBox(gs));
-                    setupRightBox();
-                    break;
-                } else {
-                    LeagueFunctions.simulateGame(gs);
-                }
-            }
-        });
-    }
-
-    /**
-     * Setup the top portion of the main menu which contains information about the current view
+     * Setup the top portion of the main menu which contains information about the current view. This also adds buttons
+     * which allows the user to save and quit from this application.
      */
     private void setupTopBox() {
         Label label = Utils.getTitleLabel("Main Menu");
@@ -197,6 +208,9 @@ class MainMenuGUI extends AbstractGUI {
         label.setPadding(format);
         label.setAlignment(Pos.TOP_CENTER);
         HBox box = new HBox(20, label);
+        /*
+        Add a button to save the league, using a FileChooser. We write out the save as a serialized object (.data)
+         */
         Button save = new Button("Save League");
         save.setPadding(format);
         save.setOnAction(e -> {
@@ -260,8 +274,16 @@ class MainMenuGUI extends AbstractGUI {
         getRootPane().setLeft(vbox);
     }
 
+    /**
+     * This brings up a view which provides information about a team. We show things such as average stats for their roster,
+     * and who their best players are
+     *
+     * @param b Button: the button to append this action to
+     * @param t Team: the team to view info about
+     */
     private void teamInfoButton(Button b, Team t) {
         b.setOnAction(e -> {
+            // First create a view of this teams average stats
             List<Entity> players = new LinkedList<>(t.getRoster());
             VBox box = new VBox(10);
             box.getChildren().add(Utils.getTitleLabel("Average Team Stats"));
@@ -273,11 +295,17 @@ class MainMenuGUI extends AbstractGUI {
                 }
             });
             box.getChildren().add(avgStatsTable);
+            /*
+            Display this teams overall rating and current record
+             */
             box.getChildren().add(new HBox(10, Utils.getBoldLabel("Overall Team Rating"),
                     Utils.getBoldLabel(String.valueOf(getUserTeam().getOverallTeamRating()))));
             int[] winLoss = LeagueFunctions.getTeamRecord(getUserTeam());
             box.getChildren().add(new HBox(10, Utils.getBoldLabel("Team Record"),
                     Utils.getBoldLabel(String.format(" %d - %d", winLoss[0], winLoss[1]))));
+            /*
+            Finally, display some of the best players in a few different categories from this users team
+             */
             box.getChildren().add(new HBox(10, Utils.getBoldLabel("Best Overall Player"),
                     Utils.getBoldLabel(t.getRankedRoster().get(0).getName())));
             Player topScorer = t.getSortedRosterBasedOffPlayerAvgStats(PlayerStat.PTS).get(0);
@@ -318,6 +346,12 @@ class MainMenuGUI extends AbstractGUI {
         });
     }
 
+    /**
+     * Creates a view that displays some information about a player
+     *
+     * @param p Player: the player to get info about
+     * @return VBox
+     */
     private VBox createPlayerBox(Player p) {
         VBox playerBox = new VBox(5);
         playerBox.getChildren().add(Utils.getTitleLabel(p.getName()));
@@ -354,6 +388,9 @@ class MainMenuGUI extends AbstractGUI {
         getRootPane().setBottom(hBox);
     }
 
+    /**
+     * Updates the record of the user team in the GUI.
+     */
     private void updateRecord() {
         int[] winLoss = LeagueFunctions.getTeamRecord(getUserTeam());
         ((VBox) getRootPane().getLeft())
@@ -361,7 +398,7 @@ class MainMenuGUI extends AbstractGUI {
     }
 
 
-    public Team getUserTeam() {
+    Team getUserTeam() {
         return userTeam;
     }
 

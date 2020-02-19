@@ -18,6 +18,15 @@ import javafx.stage.Stage;
 
 import java.util.Optional;
 
+/**
+ * CS622
+ * NewLeagueGUI.java
+ * This class implements the view a user is shown when starting a new league. It is simply a bunch of buttons
+ * with names of teams. Once the user selects their team, an option is given to do an automated or manual draft.
+ *
+ * @author apalfi
+ * @version 1.0
+ */
 class NewLeagueGUI extends AbstractGUI {
 
     NewLeagueGUI(Stage primaryStage) {

@@ -17,6 +17,14 @@ import javafx.stage.Stage;
 
 import java.io.File;
 
+/**
+ * CS 622
+ * RootGUI.java
+ * The RootGUI shows a basic screen where the user can either start a new league or load a previous one
+ *
+ * @author apalfi
+ * @version 1.0
+ */
 class RootGUI extends AbstractGUI {
 
 

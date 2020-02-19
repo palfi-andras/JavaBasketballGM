@@ -4,7 +4,13 @@ import javafx.application.Application;
 import javafx.stage.Stage;
 
 /**
- * Barebones start to a GUI for the Basketball Simulator.
+ * CS 622
+ * JavaBasketballGMGUI.java
+ * The JavaBasketballGMGUI class is the main starting point for this program. It starts a new instance of RootGUI which
+ * will lead to other GUIs.
+ *
+ * @author apalfi
+ * @version 1.0
  */
 public class JavaBasketballGMGUI extends Application {
 

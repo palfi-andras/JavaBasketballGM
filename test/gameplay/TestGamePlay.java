@@ -9,7 +9,7 @@ public class TestGamePlay {
     public void testGamePlay() {
         League.getInstance().automatedDraft();
         League.getInstance().setupRoundRobinTournament();
-        League.getInstance().simulateRoundRobinTournament();
+        //League.getInstance().simulateRoundRobinTournament();
         League.getInstance();
     }
 }

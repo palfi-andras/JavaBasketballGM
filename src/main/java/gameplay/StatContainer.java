@@ -1,7 +1,6 @@
 package gameplay;
 
 import core.Utils;
-import sun.reflect.generics.reflectiveObjects.NotImplementedException;
 
 import java.io.Serializable;
 import java.util.ArrayList;
@@ -103,7 +102,7 @@ public class StatContainer<K, E extends Number & Comparable<E>> implements Seria
             return (E) sum;
         } else {
             // So far we only use double or ints. Longs and floats could also be implemented
-            throw new NotImplementedException();
+            throw new RuntimeException();
         }
     }
 
