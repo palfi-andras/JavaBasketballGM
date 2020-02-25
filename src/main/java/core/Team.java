@@ -115,9 +115,14 @@ public class Team extends AbstractEntity {
      *
      * @param p Player
      */
-    void addPlayerToRoster(Player p) {
+    public void addPlayerToRoster(Player p) {
         assert !getRoster().contains(p);
         getRoster().add(p);
+    }
+
+    public void removePlayerFromRoster(Player p) {
+        assert getRoster().contains(p);
+        getRoster().remove(p);
     }
 
     int getRosterSize() {

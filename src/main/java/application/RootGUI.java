@@ -36,17 +36,34 @@ class RootGUI extends AbstractGUI {
         label.setAlignment(Pos.TOP_CENTER);
         Button newL = new Button("New League");
         newL.setOnAction(e -> {
-            NewLeagueGUI newLeagueGUI = new NewLeagueGUI(primaryStage);
-            primaryStage.getScene().setRoot(newLeagueGUI.getRootPane());
+            FileChooser fileChooser = new FileChooser();
+            FileChooser.ExtensionFilter extFilter = new FileChooser.ExtensionFilter("DB files (*.db)", "*.db");
+            fileChooser.getExtensionFilters().add(extFilter);
+            File file = fileChooser.showSaveDialog(primaryStage);
+            if (file == null) {
+                throw new RuntimeException("Error Saving File!");
+            } else {
+                League.getInstance(file.getName().substring(0, file.getName().length() - 3), file, true);
+                Stage runtimeStage = new Stage();
+                runtimeStage.setTitle("JavBasketballGM");
+                NewLeagueGUI newLeagueGUI;
+                if (file.exists())
+                    newLeagueGUI = new NewLeagueGUI(runtimeStage, true);
+                else
+                    newLeagueGUI = new NewLeagueGUI(runtimeStage, false);
+                runtimeStage.setScene(new Scene(newLeagueGUI.getRootPane(), 1050, 850));
+                primaryStage.close();
+                runtimeStage.show();
+            }
         });
         Button loadL = new Button("Load League");
         loadL.setOnAction(e -> {
             FileChooser chooser = new FileChooser();
             FileChooser.ExtensionFilter extFilter =
-                    new FileChooser.ExtensionFilter("DATA files (*.data)", "*.data");
+                    new FileChooser.ExtensionFilter("DB files (*.db)", "*.db");
             chooser.getExtensionFilters().add(extFilter);
             File file = chooser.showOpenDialog(primaryStage);
-            if (file != null && Utils.deserializeLeague(file.getAbsolutePath())) {
+            if (file != null && Utils.loadLeagueFromDatabase(file)) {
                 Alert alert = new Alert(Alert.AlertType.CONFIRMATION, "Successfully Loaded League!");
                 alert.showAndWait();
                 MainMenuGUI mainMenuGUI = new MainMenuGUI(primaryStage,

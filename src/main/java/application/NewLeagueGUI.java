@@ -1,6 +1,7 @@
 package application;
 
 
+import core.DatabaseConnection;
 import core.League;
 import core.LeagueFunctions;
 import core.Team;
@@ -29,8 +30,9 @@ import java.util.Optional;
  */
 class NewLeagueGUI extends AbstractGUI {
 
-    NewLeagueGUI(Stage primaryStage) {
+    NewLeagueGUI(Stage primaryStage, boolean clearExisting) {
         super();
+        DatabaseConnection.getInstance(clearExisting);
         Label label1 = new Label("Select Your Team");
         label1.setFont(Font.font("Arial", 36));
         label1.setPadding(new Insets(10, 0, 10, 0));

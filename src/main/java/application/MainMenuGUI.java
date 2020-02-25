@@ -17,15 +17,14 @@ import javafx.scene.control.Button;
 import javafx.scene.control.ButtonType;
 import javafx.scene.control.Label;
 import javafx.scene.control.ScrollPane;
+import javafx.scene.control.Separator;
 import javafx.scene.control.TableView;
 import javafx.scene.input.MouseButton;
 import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
-import javafx.stage.FileChooser;
 import javafx.stage.Stage;
 
-import java.io.File;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
@@ -55,6 +54,13 @@ class MainMenuGUI extends AbstractGUI {
         setupLowBox();
         setupRightBox();
 
+    }
+
+    private void refresh() {
+        setupTopBox();
+        setupLeftBox();
+        setupRightBox();
+        setupLowBox();
     }
 
     /**
@@ -214,23 +220,16 @@ class MainMenuGUI extends AbstractGUI {
         Button save = new Button("Save League");
         save.setPadding(format);
         save.setOnAction(e -> {
-            FileChooser fileChooser = new FileChooser();
-            FileChooser.ExtensionFilter extFilter = new FileChooser.ExtensionFilter("DATA files (*.data)", "*.data");
-            fileChooser.getExtensionFilters().add(extFilter);
-            File file = fileChooser.showSaveDialog(primaryStage);
-            if (file != null) {
-                if (Utils.serializeLeague(League.getInstance(), file.getAbsolutePath(), getUserTeam())) {
-                    Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-                    alert.setTitle("Success!");
-                    alert.setHeaderText("League has been saved.");
-                    alert.setContentText(String.format("File Path: %s", file.getAbsolutePath()));
-                    alert.showAndWait();
-                } else {
-                    Alert alert = new Alert(Alert.AlertType.ERROR);
-                    alert.setTitle("Failure!");
-                    alert.setHeaderText("Error Saving League");
-                    alert.showAndWait();
-                }
+            if (Utils.saveLeagueToDatabase(League.getInstance(), getUserTeam())) {
+                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                alert.setTitle("Success!");
+                alert.setHeaderText("League has been saved.");
+                alert.showAndWait();
+            } else {
+                Alert alert = new Alert(Alert.AlertType.ERROR);
+                alert.setTitle("Failure!");
+                alert.setHeaderText("Error Saving League");
+                alert.showAndWait();
             }
         });
         box.getChildren().add(save);
@@ -257,7 +256,7 @@ class MainMenuGUI extends AbstractGUI {
      * Setup the left portion of the main menu which contains buttons that bring up information about the users roster
      */
     private void setupLeftBox() {
-        VBox vbox = new VBox(2);
+        VBox vbox = new VBox(10);
         vbox.getChildren().add(Utils.getBoldLabel(String.format("Your Team: %s", getUserTeam().getName())));
         int[] winLoss = LeagueFunctions.getTeamRecord(getUserTeam());
         vbox.getChildren().add(Utils.getBoldLabel(String.format("Record: %d - %d", winLoss[0], winLoss[1])));
@@ -267,10 +266,46 @@ class MainMenuGUI extends AbstractGUI {
             setupPlayerButton(p, button);
             vbox.getChildren().add(button);
         }
-        vbox.getChildren().add(Utils.getBoldLabel("\n\n"));
+        vbox.getChildren().add(new Separator());
         Button teamInfo = new Button("Team Info");
         teamInfoButton(teamInfo, getUserTeam());
         vbox.getChildren().add(teamInfo);
+        Button signFreeAgent = new Button("Free Agents");
+        signFreeAgent.setOnAction(e -> {
+            VBox freeAgentPane = new VBox(10);
+            freeAgentPane.getChildren().add(Utils.getTitleLabel("Free Agents"));
+            freeAgentPane.getChildren().add(Utils.getStandardLabel("Tip: Double-click a players name to sign the free agent"));
+            TableView<Entity> freeAgents = Utils.createEntityAvgStatsTable(new LinkedList<>(
+                    LeagueFunctions.getFreeAgents()));
+            freeAgents.setOnMouseClicked((MouseEvent event) -> {
+                if (event.getButton().equals(MouseButton.PRIMARY) && event.getClickCount() == 2) {
+                    if (LeagueFunctions.getTeam(userTeam).getRoster().size() < League.PLAYERS_PER_TEAM) {
+                        Player freeAgent = (Player)
+                                freeAgents.getSelectionModel().getSelectedItem();
+                        // Allowed
+                        Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
+                                String.format("Are you sure you want to add free agent %s to your team?", freeAgent.getName()),
+                                ButtonType.YES, ButtonType.NO);
+                        confirm.setHeaderText("Confirm your selection.");
+                        Optional<ButtonType> response = confirm.showAndWait();
+                        if (response.get() == ButtonType.YES) {
+                            LeagueFunctions.getTeam(userTeam).addPlayerToRoster(freeAgent);
+                            refresh();
+                        }
+                    } else {
+                        // Unallowed
+                        Alert cannot = new Alert(Alert.AlertType.ERROR, "Your team already has the maximum " +
+                                "amount of players. You must drop someone first before adding a free agent");
+                        cannot.setHeaderText("Error: Team Already Filled");
+                        cannot.showAndWait();
+                    }
+                }
+            });
+            freeAgentPane.getChildren().add(freeAgents);
+            freeAgentPane.setAlignment(Pos.TOP_CENTER);
+            getRootPane().setCenter(freeAgentPane);
+        });
+        vbox.getChildren().addAll(signFreeAgent);
         getRootPane().setLeft(vbox);
     }
 
@@ -368,6 +403,22 @@ class MainMenuGUI extends AbstractGUI {
             TableView<Entity> statTable = Utils.createEntityAvgStatsTable(p);
             statTable.setPrefHeight(150);
             playerBox.getChildren().add(statTable);
+        }
+        if (LeagueFunctions.getPlayerTeam(p) == userTeam) {
+            Button dropPlayer = new Button("Release Player");
+            dropPlayer.setOnAction(e -> {
+                Alert areYouSure = new Alert(Alert.AlertType.CONFIRMATION,
+                        String.format("%s will be released and become a free agent", p.getName()),
+                        ButtonType.YES, ButtonType.NO);
+                areYouSure.setTitle("Are you sure?");
+                areYouSure.setHeaderText("Are you sure you want to drop this player?");
+                Optional<ButtonType> response = areYouSure.showAndWait();
+                if (response.get() == ButtonType.YES) {
+                    LeagueFunctions.releasePlayerIntoFreeAgency(p);
+                    refresh();
+                }
+            });
+            playerBox.getChildren().addAll(dropPlayer);
         }
         return playerBox;
     }

@@ -53,6 +53,14 @@ public class LeagueFunctions {
         return null;
     }
 
+    public static Player getPlayer(int pid) {
+        Player p = null;
+        for (Player player : getAllPlayers())
+            if (player.getID() == pid)
+                p = player;
+        return p;
+    }
+
     public static int getRosterSize(Team t) {
         return getTeam(t.getID()).getRoster().size();
     }
@@ -62,10 +70,20 @@ public class LeagueFunctions {
         return League.getInstance().getGames();
     }
 
+
     public static List<GameSimulation> getGamesForTeam(Team team) {
         List<GameSimulation> games = new ArrayList<>();
         for (GameSimulation gs : League.getInstance().getGames())
             if (gs.getHomeTeam() == team || gs.getAwayTeam() == team)
+                games.add(gs);
+        return games;
+    }
+
+    public static List<GameSimulation> getGamesForPlayer(Player player) {
+        List<GameSimulation> games = new LinkedList<>();
+        Team playerTeam = getPlayerTeam(player);
+        for (GameSimulation gs : getAllGames())
+            if (gs.getHomeTeam() == playerTeam || gs.getAwayTeam() == playerTeam)
                 games.add(gs);
         return games;
     }
@@ -169,6 +187,15 @@ public class LeagueFunctions {
     public static void simulateGame(GameSimulation gs) {
         League.getInstance().recordGameResult(gs.simulateGame());
         League.getInstance().recordStats(gs);
+    }
+
+    /**
+     * Releases a player from their team and into free agency
+     */
+    public static void releasePlayerIntoFreeAgency(Player p) {
+        Team playerTeam = getPlayerTeam(p);
+        assert playerTeam != null;
+        playerTeam.removePlayerFromRoster(p);
     }
 
     public static double getLeagueAvgTeamOvrRating() {

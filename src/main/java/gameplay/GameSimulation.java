@@ -9,6 +9,7 @@ import core.Utils;
 
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -41,7 +42,7 @@ public class GameSimulation implements Serializable {
     // all but over and the offense will adjust by running the clock down more
     private static final int BLOWOUT = 20;
     // The rate that random fouls occur (Non-shooting fouls only)
-    private static final double FOUL_RATE = 0.05;
+    private static final double FOUL_RATE = 0.04;
     private static final double STEAL_RATE = 0.05;
     private static final double PERIMETER_BLOCK_RATE = 0.10;
     private static final double INSIDE_BLOCK_RATE = 0.20;
@@ -71,9 +72,10 @@ public class GameSimulation implements Serializable {
     private List<String> gameLog = new LinkedList<>();
 
 
-    public GameSimulation(Team home, Team away) {
-        // Set the unique ID of this game
-        setId(League.getInstance().getNextUniqueKey());
+    public GameSimulation(Team home, Team away, Integer gid) {
+        if (gid == null)
+            // Set the unique ID of this game
+            setId(League.getInstance().getNextUniqueKey());
         // Reset each teams players energy to 1.0
         home.resetEnergyLevels();
         away.resetEnergyLevels();
@@ -119,6 +121,17 @@ public class GameSimulation implements Serializable {
         return gameLog;
     }
 
+    public String getFullGameLog() {
+        StringBuilder log = new StringBuilder();
+        for (String event : getGameLog())
+            log.append(String.format("%s\n", event));
+        return log.toString();
+    }
+
+    public void reconstructGameLog(String fullGameLog) {
+        this.gameLog = Arrays.asList(fullGameLog.split("\\r?\\n"));
+    }
+
     private void log(String message) {
         gameLog.add(message);
     }
@@ -130,6 +143,11 @@ public class GameSimulation implements Serializable {
      */
     private void incrementGameTime(int seconds) {
         gameTime += seconds;
+    }
+
+
+    public void setGameTime(int seconds) {
+        gameTime = seconds;
     }
 
     /**
@@ -359,7 +377,7 @@ public class GameSimulation implements Serializable {
      * @param stat TeamStat
      * @param val  int
      */
-    private void setTeamStat(Team team, TeamStat stat, int val) {
+    public void setTeamStat(Team team, TeamStat stat, int val) {
         if (team == getHomeTeam()) {
             setHomeTeamStat(stat, val);
         } else if (team == getAwayTeam()) {
@@ -397,7 +415,7 @@ public class GameSimulation implements Serializable {
      * @param stat   PlayerStat
      * @param val    int
      */
-    private void setPlayerStat(Player player, PlayerStat stat, int val) {
+    public void setPlayerStat(Player player, PlayerStat stat, int val) {
         Objects.requireNonNull(getPlayerStats(player)).put(stat, val);
     }
 
@@ -563,6 +581,7 @@ public class GameSimulation implements Serializable {
                     p.getPlayerEnergy() == 1.0)
                 getAwayPlayersOnCourt().add(p);
         }
+
         assert getHomePlayersOnCourt().size() == 5 &&
                 getAwayPlayersOnCourt().size() == 5;
     }
@@ -784,7 +803,7 @@ public class GameSimulation implements Serializable {
         incrementPlayerStat(shooter, PlayerStat.TWO_POINT_ATTEMPTS, 1);
         if (midRangeShotAttr > insideScoringAttr) {
             // Player will take a mid-range jump shot
-            double probabilityFoul = 0.8; // A mid range shot has an 8% chance of being fouled
+            double probabilityFoul = 0.08; // A mid range shot has an 8% chance of being fouled
             double outcome = League.getInstance().getRandomDouble(0.0, 1.0);
             // First check if player was fouled without making a shot
             if (outcome <= probabilityFoul) {
@@ -810,7 +829,7 @@ public class GameSimulation implements Serializable {
             double dunkAttribute = shooter.getPlayerAttribute(PlayerAttributes.DUNK);
             if (dunkAttribute > insideScoringAttr) {
                 // Dunk
-                double probabilityFoul = 0.4; // Probability of foul on dunk is 40%
+                double probabilityFoul = 0.2; // Probability of foul on dunk is 40%
                 double outcome = League.getInstance().getRandomDouble(0.0, 1.0);
                 if (outcome <= probabilityFoul) {
                     simulateFreeThrows(getTeamOnDefense(), 2, shooter);
@@ -829,7 +848,7 @@ public class GameSimulation implements Serializable {
                 }
             } else {
                 // Normal layup
-                double probabilityFoul = 0.35;
+                double probabilityFoul = 0.15;
                 double outcome = League.getInstance().getRandomDouble(0.0, 1.0);
                 if (outcome <= probabilityFoul) {
                     simulateFreeThrows(getTeamOnDefense(), 2, shooter);

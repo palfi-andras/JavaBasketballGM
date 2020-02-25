@@ -80,13 +80,21 @@ public class StatContainer<K, E extends Number & Comparable<E>> implements Seria
     }
 
     /**
+     * Returns the nth instance of stat K
+     */
+    public E getNthInstanceOfStat(K stat, int n) {
+        assert statExists(stat);
+        assert getAllValuesOfStat(stat).size() >= n;
+        return getAllValuesOfStat(stat).get(n);
+    }
+
+    /**
      * Returns a sum of each of the elements stored in the base container for a particular stat of type K
      *
      * @param stat K
      * @return E
      */
     public E getSumOfStatContainer(K stat) {
-        assert statExists(stat);
         if (!statExists(stat) || getBaseContainer().get(stat).size() == 0) {
             return (E) (Integer) 0;
         }

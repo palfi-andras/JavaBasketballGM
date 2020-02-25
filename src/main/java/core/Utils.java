@@ -23,6 +23,8 @@ import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
@@ -40,6 +42,12 @@ import java.util.Map;
  * @version 1.0
  */
 public class Utils {
+
+
+    /**
+     * SAVE/ LOAD VIA JSON
+     */
+
     /**
      * Save the current league instance to a JSON file
      *
@@ -68,21 +76,6 @@ public class Utils {
             e.printStackTrace();
         }
         return false;
-    }
-
-    public static boolean serializeLeague(League league, String filename, Team userTeam) {
-        try {
-            FileOutputStream file = new FileOutputStream(filename);
-            ObjectOutputStream out = new ObjectOutputStream(file);
-            league.setUserTeam(userTeam);
-            out.writeObject(league);
-            out.close();
-            file.close();
-            return true;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return false;
-        }
     }
 
     /**
@@ -121,6 +114,26 @@ public class Utils {
         }
     }
 
+    /**
+     * SAVE/LOAD VIA SERIALIZATION
+     */
+
+    public static boolean serializeLeague(League league, String filename, Team userTeam) {
+        try {
+            FileOutputStream file = new FileOutputStream(filename);
+            ObjectOutputStream out = new ObjectOutputStream(file);
+            league.setUserTeam(userTeam);
+            out.writeObject(league);
+            out.close();
+            file.close();
+            return true;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+
     public static boolean deserializeLeague(String filename) {
         League league;
 
@@ -137,6 +150,129 @@ public class Utils {
             ex.printStackTrace();
         }
         return false;
+    }
+
+    /**
+     * SAVE/LOAD via Database
+     */
+
+    public static boolean saveLeagueToDatabase(League league, Team userTeam) {
+        try {
+            // First write out the league table and mark the user's team
+            DatabaseConnection.getInstance().insertNewLeagueEntry(league, userTeam);
+            // Next write out all teams into the teams table
+            for (Team t : LeagueFunctions.getAllTeams()) {
+                DatabaseConnection.getInstance().updateTeamEntry(t);
+                DatabaseConnection.getInstance().addTeamStatEntry(t);
+            }
+
+            // Next update players
+            for (Player p : LeagueFunctions.getAllPlayers()) {
+                DatabaseConnection.getInstance().updatePlayerEntry(p);
+                DatabaseConnection.getInstance().addPlayerStatEntry(p);
+            }
+
+            for (GameSimulation gs : LeagueFunctions.getAllGames()) {
+                DatabaseConnection.getInstance().addGameEntry(gs);
+            }
+            return true;
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            return false;
+        }
+    }
+
+    public static boolean loadLeagueFromDatabase(File databaseFile) {
+        DatabaseConnection.getInstance(databaseFile);
+        try {
+            // First get the data from the league table.
+            ResultSet leagueData = DatabaseConnection.getInstance().getLeagueEntry();
+            assert leagueData != null;
+            int lid = leagueData.getInt("lid");
+            String leagueName = leagueData.getString("name");
+            int userTeamId = leagueData.getInt("userTeam");
+            // Now create base League instance
+            League.getInstance(lid, leagueName, databaseFile, false);
+            // Now create all of the Team Entities
+            ResultSet teamEntries = DatabaseConnection.getInstance().getAllTeamEntries();
+            while (teamEntries.next()) {
+                Team t = new Team(teamEntries.getInt("tid"));
+                t.setEntityName(teamEntries.getString("name"));
+                for (TeamAttributes atrr : TeamAttributes.values()) {
+                    t.getEntityAttributes().put(atrr.toString(), teamEntries.getDouble(atrr.toString()));
+                }
+                League.getInstance().addEntity(t);
+            }
+            // Now set the user team
+            League.getInstance().setUserTeam(LeagueFunctions.getTeam(userTeamId));
+            // Now create all of the player entities
+            ResultSet playerEntries = DatabaseConnection.getInstance().getAllPlayerEntries();
+            while (playerEntries.next()) {
+                Player p = new Player(playerEntries.getInt("pid"));
+                p.setEntityName(playerEntries.getString("name"));
+                for (PlayerAttributes attr : PlayerAttributes.values())
+                    p.getEntityAttributes().getOrDefault(attr.toString(), playerEntries.getDouble(attr.toString()));
+                // If this player is on a team, add it to that teams roster
+                if (playerEntries.getObject("tid") != null)
+                    LeagueFunctions.getTeam(playerEntries.getInt("tid")).addPlayerToRoster(p);
+            }
+            // Now add all the game entries and stats for all players and teams
+            // order by lowest id so that games that happened earlier will be parsed
+            // first
+            ResultSet gameEntries = DatabaseConnection.getInstance().getAllGameEntriesSortedByID();
+            ResultSet playerStatEntries = DatabaseConnection.getInstance().getAllGameAndPlayerStatEntries();
+            ResultSet teamStatEntries = DatabaseConnection.getInstance().getAllGameAndTeamStatEntries();
+            // Cycle through each game and rebuild the Game Objects
+            List<GameSimulation> games = new LinkedList<>();
+            while (gameEntries.next()) {
+                int gid = gameEntries.getInt("gid");
+                Team home = LeagueFunctions.getTeam(gameEntries.getInt("homeTeam"));
+                Team away = LeagueFunctions.getTeam(gameEntries.getInt("awayTeam"));
+                String gameLog = gameEntries.getString("gameLog");
+                GameSimulation g = new GameSimulation(home, away, gid);
+                if (gameLog.length() > 0) {
+                    g.reconstructGameLog(gameLog);
+                    g.setGameTime(Integer.MAX_VALUE);
+                }
+                games.add(g);
+            }
+            // Now cycle through each team stat entry and add them back to the game objects
+            while (teamStatEntries.next()) {
+                GameSimulation g = null;
+                int gid = teamStatEntries.getInt(1);
+                for (GameSimulation gs : games)
+                    if (gs.getId() == gid)
+                        g = gs;
+                assert g != null;
+                Team t = LeagueFunctions.getTeam(teamStatEntries.getInt("tid"));
+                for (TeamStat stat : TeamStat.values()) {
+                    g.setTeamStat(t, stat, teamStatEntries.getInt(stat.toString()));
+                }
+            }
+            // Finally cycle through all player entries and recreate player stats for each game
+            while (playerStatEntries.next()) {
+                GameSimulation g = null;
+                int gid = playerStatEntries.getInt(1);
+                for (GameSimulation gs : games)
+                    if (gs.getId() == gid)
+                        g = gs;
+                assert g != null;
+                Player p = LeagueFunctions.getPlayer(playerStatEntries.getInt("pid"));
+                for (PlayerStat stat : PlayerStat.values())
+                    g.setPlayerStat(p, stat, playerStatEntries.getInt(stat.toString()));
+            }
+            // Update stat containers
+            for (GameSimulation gs : games) {
+                League.getInstance().recordStats(gs);
+            }
+            // Add all the games to the League instance
+            for (GameSimulation gs : games)
+                League.getInstance().addGame(gs);
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
     }
 
 

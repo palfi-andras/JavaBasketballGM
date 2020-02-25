@@ -7,6 +7,7 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import java.io.BufferedReader;
+import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.Collections;
@@ -60,6 +61,7 @@ public class League extends AbstractEntity {
     // A list of teams who won games in this league
     private List<Team> gameResults = new LinkedList<>();
     private Team userTeam;
+    private File leagueSave;
 
     /**
      * Constructors
@@ -68,12 +70,15 @@ public class League extends AbstractEntity {
     private League(int id) {
         super(id);
         initialize();
+        DatabaseConnection.getInstance();
     }
 
-    private League(int id, String name) {
-        super(id);
-        setID(id);
-        setEntityName(name);
+
+    private League(int id, String name, File save, boolean initialize) {
+        super(id, name);
+        leagueSave = save;
+        if (initialize)
+            initialize();
     }
 
     private static AtomicInteger getIdCreator() {
@@ -87,9 +92,22 @@ public class League extends AbstractEntity {
 
     public static League getInstance() {
         if (instance == null)
-            instance = new League(0);
+            instance = new League(idCreator.incrementAndGet());
         return instance;
     }
+
+    public static League getInstance(String name, File saveFile, boolean initialize) {
+        assert instance == null;
+        instance = new League(idCreator.incrementAndGet(), name, saveFile, initialize);
+        return instance;
+    }
+
+    public static League getInstance(int lid, String name, File saveFile, boolean initialize) {
+        assert instance == null;
+        instance = new League(lid, name, saveFile, initialize);
+        return instance;
+    }
+
 
     /**
      * Loads a previous instance of a League object. This is used when loading from JSON.
@@ -98,7 +116,7 @@ public class League extends AbstractEntity {
      * @return League object
      */
     private static League getInstance(AbstractEntity previous) {
-        instance = new League(previous.getID(), previous.getName());
+        //instance = new League(previous.getID(), previous.getName());
         return instance;
     }
 
@@ -106,6 +124,7 @@ public class League extends AbstractEntity {
         instance = previous;
         return instance;
     }
+
 
     /**
      * Returns a League object produced from a JSON Object
@@ -126,6 +145,10 @@ public class League extends AbstractEntity {
                 league.addEntity(p);
         }
         return league;
+    }
+
+    public File getLeagueSave() {
+        return leagueSave;
     }
 
     List<String> getFirstNames() {
@@ -207,7 +230,7 @@ public class League extends AbstractEntity {
      *
      * @param game GameSimulation to be added
      */
-    private void addGame(GameSimulation game) {
+    void addGame(GameSimulation game) {
         getGames().add(game);
     }
 
@@ -231,7 +254,7 @@ public class League extends AbstractEntity {
         return getEntities().contains(entity);
     }
 
-    private void addEntity(AbstractEntity entity) {
+    void addEntity(AbstractEntity entity) {
         assert !entityExists(entity);
         getEntities().add(entity);
     }
@@ -241,7 +264,8 @@ public class League extends AbstractEntity {
      * and players to the pool of entities. For each entity, initialize their attributes once they are created.
      */
     private void initialize() {
-        this.setEntityName("league1");
+        if (this.getName() == null)
+            setEntityName("league1");
         // Load the list of names for each entity type from CSVs
         setFirstNames(getFirstRowFromCSVFile(Player.getPathToFirstNameCSV()));
         setLastNames(getFirstRowFromCSVFile(Player.getPathToLastNameCSV()));
@@ -334,13 +358,13 @@ public class League extends AbstractEntity {
         for (int day = 0; day < numDays; day++) {
             int teamIdx = day % teamIndexes.size();
             Team nextTeam = (Team) getEntities().get(teamIndexes.get(teamIdx));
-            addGame(new GameSimulation(team0, nextTeam));
+            addGame(new GameSimulation(team0, nextTeam, null));
             for (int idx = 1; idx < (getNumTeams() / 2); idx++) {
                 int firstTeam = (day + idx) % teamIndexes.size();
                 int secondTeam = (day + teamIndexes.size() - idx) % teamIndexes.size();
                 Team t1 = (Team) getEntities().get(teamIndexes.get(firstTeam));
                 Team t2 = (Team) getEntities().get(teamIndexes.get(secondTeam));
-                addGame(new GameSimulation(t1, t2));
+                addGame(new GameSimulation(t1, t2, null));
             }
         }
     }
