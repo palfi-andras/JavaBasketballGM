@@ -43,7 +43,8 @@ public class League extends AbstractEntity {
     public static final int PLAYERS_PER_TEAM = 15;
     // Number of players in the league is equal to the full roster size of each team + 100 extra free agents
     public static final int NUM_PLAYERS = (NUM_TEAMS * PLAYERS_PER_TEAM) + 100;
-
+    // Max number of threads that can be used in the thread pool
+    private static final int MAX_NUM_THREADS = Runtime.getRuntime().availableProcessors() + 1;
     // League singleton
     private static League instance = null;
     // An AtomicInteger is a thread-safe way to create IDs for our entities.
@@ -62,6 +63,7 @@ public class League extends AbstractEntity {
     private List<Team> gameResults = new LinkedList<>();
     private Team userTeam;
     private File leagueSave;
+
 
     /**
      * Constructors
@@ -147,6 +149,11 @@ public class League extends AbstractEntity {
         return league;
     }
 
+    public static int getMaxNumThreads() {
+        return MAX_NUM_THREADS;
+    }
+
+
     public File getLeagueSave() {
         return leagueSave;
     }
@@ -196,6 +203,7 @@ public class League extends AbstractEntity {
     public void setUserTeam(Team userTeam) {
         this.userTeam = userTeam;
     }
+
 
     /**
      * @return a random city
@@ -398,7 +406,7 @@ public class League extends AbstractEntity {
     /**
      * Updates Player and Team StatContainers after a game has ended
      */
-    void recordStats(GameSimulation game) {
+    public void recordStats(GameSimulation game) {
         for (Map.Entry<TeamStat, Integer> entry : game.getHomeTeamStats().entrySet())
             getEntity(game.getHomeTeam().getID()).getStatContainer().updateStat(entry.getKey(), entry.getValue());
 

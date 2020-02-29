@@ -2,6 +2,7 @@ package application;
 
 import core.Entity;
 import core.EntityType;
+import core.GameRunner;
 import core.League;
 import core.LeagueFunctions;
 import core.Player;
@@ -25,9 +26,14 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 
 /**
@@ -44,6 +50,7 @@ class MainMenuGUI extends AbstractGUI {
     // The users team
     private final Team userTeam;
     private final Stage primaryStage;
+    private Map<Thread, List<Double>> runtimes = new LinkedHashMap<>();
 
     MainMenuGUI(Stage primaryStage, Team userTeam) {
         super();
@@ -89,9 +96,82 @@ class MainMenuGUI extends AbstractGUI {
             setupRightBox();
         });
         scheduleBox.getChildren().add(scheduleMoreGames);
-        //  Button simulateGame = new Button("Simulate Next Game");
-        //  simulateNextGameButton(simulateGame);
-        //  scheduleBox.getChildren().add(simulateGame);
+        Button simulateAllGames = new Button("Simulate All Games");
+        simulateAllGames.setOnAction(e -> {
+            if (LeagueFunctions.getGamesForTeam(userTeam).size() == 0) {
+                Alert noGames = new Alert(Alert.AlertType.ERROR, "Your team doesnt have any games scheduled." +
+                        "Press the Schedule More Games button to add new games to the schedule");
+                noGames.showAndWait();
+                return;
+            }
+            Alert confirm = new Alert(Alert.AlertType.CONFIRMATION,
+                    String.format("Are you sure you want to sim all of your games and other games in the league? This will execute %d games across %d threads."
+                            , LeagueFunctions.getAllUnplayedGames().size(), League.getInstance().getMaxNumThreads()), ButtonType.YES, ButtonType.NO);
+            Optional<ButtonType> response = confirm.showAndWait();
+            if (response.get() == ButtonType.YES) {
+                VBox threadedSimBox = new VBox(10, Utils.getTitleLabel("Multiple Game Simulation"));
+                threadedSimBox.getChildren().add(Utils.getStandardLabel("This system will use multiple threads to " +
+                        "simulate all of the games left to be played in the league."));
+                threadedSimBox.getChildren().add(Utils.getBoldLabel(String.format("Number of threads opened: %d",
+                        League.getInstance().getMaxNumThreads())));
+                threadedSimBox.getChildren().add(Utils.getStandardLabel("This is calculated by: Number of Processors on your machine + 1"));
+                VBox events = new VBox(3, Utils.getBoldLabel("Thread Game Events: "));
+                events.setPrefHeight(300);
+                VBox avgs = new VBox(3);
+                avgs.setPrefHeight(300);
+                HBox totals = new HBox(10);
+                List<GameRunner> gameRunners = new LinkedList<>();
+                for (GameSimulation g : LeagueFunctions.getAllUnplayedGames()) {
+                    GameRunner runner = new GameRunner(g);
+                    runner.setOnSucceeded((event) -> {
+                        Thread gameThread = runner.getValue().getKey();
+                        double runtime = runner.getValue().getValue();
+                        events.getChildren().add(Utils.getStandardLabel(
+                                String.format("Thread %s ran game id %d in %f ms. The outcome was %s %d - %d %s",
+                                        gameThread.getName(), g.getId(), runtime, g.getHomeTeam().getName(),
+                                        g.getHomeTeamStat(TeamStat.TEAM_PTS), g.getAwayTeamStat(TeamStat.TEAM_PTS),
+                                        g.getAwayTeam().getName())
+                        ));
+                        if (runtimes.containsKey(gameThread)) {
+                            runtimes.get(gameThread).add(runtime);
+                        } else {
+                            runtimes.put(gameThread, new LinkedList<>(Collections.singleton(runtime)));
+                        }
+                        avgs.getChildren().clear();
+                        int totalCount = 0;
+                        double totalAvg = 0.0;
+                        for (Map.Entry<Thread, List<Double>> runtimeEntry : runtimes.entrySet()) {
+                            int count = runtimeEntry.getValue().size();
+                            totalCount += count;
+                            double avg = 0.0;
+                            for (double d : runtimeEntry.getValue()) {
+                                avg += d;
+                                totalAvg += d;
+                            }
+                            avgs.getChildren().add(Utils.getStandardLabel(String.format("Thread %s has run %d games at an average time of %f ms per game ",
+                                    runtimeEntry.getKey().getName(), count, avg / count)));
+                        }
+                        totals.getChildren().clear();
+                        totals.getChildren().add(Utils.getBoldLabel(String.format("%d games in total executed across all threads at an average time of %f ms per game",
+                                totalCount, totalAvg / totalCount)));
+                        updateRecord();
+                    });
+                    gameRunners.add(runner);
+                }
+                ScrollPane eventPane = new ScrollPane(events);
+                ScrollPane avgPane = new ScrollPane(avgs);
+                threadedSimBox.getChildren().add(eventPane);
+                threadedSimBox.getChildren().add(Utils.getBoldLabel("Average Thread Runtimes"));
+                threadedSimBox.getChildren().add(avgPane);
+                threadedSimBox.getChildren().add(totals);
+                getRootPane().setCenter(threadedSimBox);
+                ExecutorService service = Executors.newFixedThreadPool(League.getMaxNumThreads());
+                for (GameRunner runner : gameRunners)
+                    service.execute(runner);
+                service.shutdown();
+            }
+        });
+        scheduleBox.getChildren().add(simulateAllGames);
         schedule.setContent(scheduleBox);
         getRootPane().setRight(schedule);
     }

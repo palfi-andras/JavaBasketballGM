@@ -1154,6 +1154,8 @@ public class GameSimulation implements Serializable {
      */
     public Team simulateGame() {
         simRegulation();
+        League.getInstance().recordStats(this);
         return getWinner();
     }
+
 }

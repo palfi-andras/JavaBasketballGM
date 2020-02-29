@@ -84,7 +84,7 @@ public class StatContainer<K, E extends Number & Comparable<E>> implements Seria
      */
     public E getNthInstanceOfStat(K stat, int n) {
         assert statExists(stat);
-        assert getAllValuesOfStat(stat).size() >= n;
+        assert getAllValuesOfStat(stat).size() > n;
         return getAllValuesOfStat(stat).get(n);
     }
 

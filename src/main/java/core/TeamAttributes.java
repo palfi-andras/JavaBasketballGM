@@ -23,5 +23,7 @@ public enum TeamAttributes {
     INSIDE_DEFENSE,
     PERIMETER_DEFENSE,
     ASSIST,
-    TURNOVER
+    TURNOVER,
+    ENERGY,
+    AGE
 }

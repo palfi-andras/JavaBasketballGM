@@ -24,5 +24,6 @@ public enum PlayerAttributes {
     PERIMETER_DEFENSE,
     ASSIST,
     TURNOVER,
-    ENERGY
+    ENERGY,
+    AGE
 }

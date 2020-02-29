@@ -70,6 +70,23 @@ public class LeagueFunctions {
         return League.getInstance().getGames();
     }
 
+    public static List<GameSimulation> getAllExpiredGames() {
+        List<GameSimulation> games = new LinkedList<>();
+        for (GameSimulation g : getAllGames())
+            if (g.gameIsOver())
+                games.add(g);
+        return games;
+    }
+
+    public static List<GameSimulation> getAllUnplayedGames() {
+        List<GameSimulation> games = new LinkedList<>();
+        List<GameSimulation> expiredGames = getAllExpiredGames();
+        for (GameSimulation g : getAllGames())
+            if (!expiredGames.contains(g))
+                games.add(g);
+        return games;
+    }
+
 
     public static List<GameSimulation> getGamesForTeam(Team team) {
         List<GameSimulation> games = new ArrayList<>();
@@ -187,6 +204,14 @@ public class LeagueFunctions {
     public static void simulateGame(GameSimulation gs) {
         League.getInstance().recordGameResult(gs.simulateGame());
         League.getInstance().recordStats(gs);
+    }
+
+
+    public static boolean allGamesOver() {
+        for (GameSimulation g : getAllGames())
+            if (!g.gameIsOver())
+                return false;
+        return true;
     }
 
     /**

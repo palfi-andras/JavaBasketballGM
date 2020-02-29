@@ -14,13 +14,9 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.sql.ResultSet;
@@ -112,44 +108,6 @@ public class Utils {
             e.printStackTrace();
             return null;
         }
-    }
-
-    /**
-     * SAVE/LOAD VIA SERIALIZATION
-     */
-
-    public static boolean serializeLeague(League league, String filename, Team userTeam) {
-        try {
-            FileOutputStream file = new FileOutputStream(filename);
-            ObjectOutputStream out = new ObjectOutputStream(file);
-            league.setUserTeam(userTeam);
-            out.writeObject(league);
-            out.close();
-            file.close();
-            return true;
-        } catch (IOException e) {
-            e.printStackTrace();
-            return false;
-        }
-    }
-
-
-    public static boolean deserializeLeague(String filename) {
-        League league;
-
-        // Deserialization
-        try {
-            FileInputStream file = new FileInputStream(filename);
-            ObjectInputStream in = new ObjectInputStream(file);
-            league = (League) in.readObject();
-            League.getInstance(league);
-            in.close();
-            file.close();
-            return true;
-        } catch (IOException | ClassNotFoundException ex) {
-            ex.printStackTrace();
-        }
-        return false;
     }
 
     /**
