@@ -1,8 +1,10 @@
 package core;
 
 public enum EntityType {
-    ABSTRACT,
     PLAYER,
     TEAM,
-    LEAGUE
+    LEAGUE,
+    GAME_SIMULATION,
+    PLAYER_STAT,
+    TEAM_STAT
 }

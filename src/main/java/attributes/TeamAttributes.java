@@ -1,15 +1,15 @@
-package core;
+package attributes;
 
 /**
  * CS-622
- * PlayerAttributes.java
- * The PlayerAttributes enum stores the valid attributes a Player can have
+ * TeamAttributes.java
  * <p>
+ * The TeamAttributes enum details the types of attributes that a Team can have
  *
  * @author Andras Palfi apalfi@bu.edu
  * @version 1.0
  */
-public enum PlayerAttributes {
+public enum TeamAttributes {
     HEIGHT,
     STRENGTH,
     SPEED,
@@ -25,5 +25,5 @@ public enum PlayerAttributes {
     ASSIST,
     TURNOVER,
     ENERGY,
-    AGE
+    ROSTER
 }

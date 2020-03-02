@@ -1,6 +1,6 @@
-package core;
+package utilities;
 
-import gameplay.GameSimulation;
+import core.GameSimulation;
 import javafx.concurrent.Task;
 
 import java.util.AbstractMap;

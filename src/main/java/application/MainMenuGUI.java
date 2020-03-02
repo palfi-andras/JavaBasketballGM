@@ -1,16 +1,14 @@
 package application;
 
+import attributes.PlayerStatTypes;
+import attributes.TeamStatTypes;
 import core.Entity;
 import core.EntityType;
-import core.GameRunner;
+import core.GameSimulation;
 import core.League;
 import core.LeagueFunctions;
 import core.Player;
 import core.Team;
-import core.Utils;
-import gameplay.GameSimulation;
-import gameplay.PlayerStat;
-import gameplay.TeamStat;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Alert;
@@ -25,6 +23,8 @@ import javafx.scene.input.MouseEvent;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import utilities.GameRunner;
+import utilities.Utils;
 
 import java.util.Collections;
 import java.util.LinkedHashMap;
@@ -128,8 +128,8 @@ class MainMenuGUI extends AbstractGUI {
                         double runtime = runner.getValue().getValue();
                         events.getChildren().add(Utils.getStandardLabel(
                                 String.format("Thread %s ran game id %d in %f ms. The outcome was %s %d - %d %s",
-                                        gameThread.getName(), g.getId(), runtime, g.getHomeTeam().getName(),
-                                        g.getHomeTeamStat(TeamStat.TEAM_PTS), g.getAwayTeamStat(TeamStat.TEAM_PTS),
+                                        gameThread.getName(), g.getID(), runtime, g.getHomeTeam().getName(),
+                                        g.getHomeTeamStat(TeamStatTypes.TEAM_PTS), g.getAwayTeamStat(TeamStatTypes.TEAM_PTS),
                                         g.getAwayTeam().getName())
                         ));
                         if (runtimes.containsKey(gameThread)) {
@@ -199,8 +199,8 @@ class MainMenuGUI extends AbstractGUI {
         game.getChildren().add(Utils.getStandardLabel("\n\n"));
         // Add labels for the score
         game.getChildren().add(new HBox(180,
-                Utils.getTitleLabel(String.valueOf(gs.getHomeTeamStat(TeamStat.TEAM_PTS))), Utils.getBoldLabel("Score"),
-                Utils.getTitleLabel(String.valueOf(gs.getAwayTeamStat(TeamStat.TEAM_PTS)))));
+                Utils.getTitleLabel(String.valueOf(gs.getHomeTeamStat(TeamStatTypes.TEAM_PTS))), Utils.getBoldLabel("Score"),
+                Utils.getTitleLabel(String.valueOf(gs.getAwayTeamStat(TeamStatTypes.TEAM_PTS)))));
         // Add a button to play the game represented by this view
         Button playGame = new Button("Play Game");
         playButtonAction(gs, playGame);
@@ -293,41 +293,14 @@ class MainMenuGUI extends AbstractGUI {
         Insets format = new Insets(10, 0, 10, 0);
         label.setPadding(format);
         label.setAlignment(Pos.TOP_CENTER);
-        HBox box = new HBox(20, label);
-        /*
-        Add a button to save the league, using a FileChooser. We write out the save as a serialized object (.data)
-         */
-        Button save = new Button("Save League");
-        save.setPadding(format);
-        save.setOnAction(e -> {
-            if (Utils.saveLeagueToDatabase(League.getInstance(), getUserTeam())) {
-                Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-                alert.setTitle("Success!");
-                alert.setHeaderText("League has been saved.");
-                alert.showAndWait();
-            } else {
-                Alert alert = new Alert(Alert.AlertType.ERROR);
-                alert.setTitle("Failure!");
-                alert.setHeaderText("Error Saving League");
-                alert.showAndWait();
-            }
-        });
-        box.getChildren().add(save);
+        HBox box = new HBox(10, label);
+        box.setAlignment(Pos.TOP_CENTER);
         Button quit = new Button("Quit");
         quit.setPadding(format);
         quit.setOnAction(e -> {
-            Alert alert = new Alert(Alert.AlertType.INFORMATION,
-                    "Select yes to save the league", ButtonType.YES, ButtonType.NO);
-            alert.setTitle("Save?");
-            alert.setHeaderText("Would you like to save before quitting?");
-            Optional<ButtonType> results = alert.showAndWait();
-            if (results.get() == ButtonType.YES) {
-                save.fire();
-            }
-            if (results.get() == ButtonType.NO)
-                System.exit(0);
             System.exit(0);
         });
+        quit.setAlignment(Pos.TOP_RIGHT);
         box.getChildren().add(quit);
         getRootPane().setTop(box);
     }
@@ -341,7 +314,7 @@ class MainMenuGUI extends AbstractGUI {
         int[] winLoss = LeagueFunctions.getTeamRecord(getUserTeam());
         vbox.getChildren().add(Utils.getBoldLabel(String.format("Record: %d - %d", winLoss[0], winLoss[1])));
         vbox.getChildren().add(Utils.getBoldLabel("\nRoster:"));
-        for (Player p : LeagueFunctions.getTeam(userTeam.getID()).getRankedRoster()) {
+        for (Player p : League.getInstance().getTeam(userTeam.getID()).getRankedRoster()) {
             Button button = new Button(p.getName());
             setupPlayerButton(p, button);
             vbox.getChildren().add(button);
@@ -359,7 +332,7 @@ class MainMenuGUI extends AbstractGUI {
                     LeagueFunctions.getFreeAgents()));
             freeAgents.setOnMouseClicked((MouseEvent event) -> {
                 if (event.getButton().equals(MouseButton.PRIMARY) && event.getClickCount() == 2) {
-                    if (LeagueFunctions.getTeam(userTeam).getRoster().size() < League.PLAYERS_PER_TEAM) {
+                    if (userTeam.getRoster().size() < League.PLAYERS_PER_TEAM) {
                         Player freeAgent = (Player)
                                 freeAgents.getSelectionModel().getSelectedItem();
                         // Allowed
@@ -369,7 +342,7 @@ class MainMenuGUI extends AbstractGUI {
                         confirm.setHeaderText("Confirm your selection.");
                         Optional<ButtonType> response = confirm.showAndWait();
                         if (response.get() == ButtonType.YES) {
-                            LeagueFunctions.getTeam(userTeam).addPlayerToRoster(freeAgent);
+                            userTeam.addPlayerToRoster(freeAgent);
                             refresh();
                         }
                     } else {
@@ -423,30 +396,30 @@ class MainMenuGUI extends AbstractGUI {
              */
             box.getChildren().add(new HBox(10, Utils.getBoldLabel("Best Overall Player"),
                     Utils.getBoldLabel(t.getRankedRoster().get(0).getName())));
-            Player topScorer = t.getSortedRosterBasedOffPlayerAvgStats(PlayerStat.PTS).get(0);
-            Player topAssist = t.getSortedRosterBasedOffPlayerAvgStats(PlayerStat.ASSIST).get(0);
-            Player topOffReb = t.getSortedRosterBasedOffPlayerAvgStats(PlayerStat.ORB).get(0);
-            Player topDefReb = t.getSortedRosterBasedOffPlayerAvgStats(PlayerStat.DRB).get(0);
-            Player topStl = t.getSortedRosterBasedOffPlayerAvgStats(PlayerStat.STL).get(0);
-            Player topBlock = t.getSortedRosterBasedOffPlayerAvgStats(PlayerStat.BLK).get(0);
+            Player topScorer = t.getSortedRosterBasedOffPlayerAvgStats(PlayerStatTypes.PTS).get(0);
+            Player topAssist = t.getSortedRosterBasedOffPlayerAvgStats(PlayerStatTypes.ASSIST).get(0);
+            Player topOffReb = t.getSortedRosterBasedOffPlayerAvgStats(PlayerStatTypes.ORB).get(0);
+            Player topDefReb = t.getSortedRosterBasedOffPlayerAvgStats(PlayerStatTypes.DRB).get(0);
+            Player topStl = t.getSortedRosterBasedOffPlayerAvgStats(PlayerStatTypes.STL).get(0);
+            Player topBlock = t.getSortedRosterBasedOffPlayerAvgStats(PlayerStatTypes.BLK).get(0);
             box.getChildren().add(new HBox(10, Utils.getBoldLabel("Most Points"),
                     Utils.getBoldLabel(topScorer.getName()), Utils.getBoldLabel("Points per Game:"),
-                    Utils.getBoldLabel(String.valueOf(topScorer.getStatContainer().getAvgValueOfStat(PlayerStat.PTS)))));
+                    Utils.getBoldLabel(String.valueOf(topScorer.getAvgValueOfPlayerStat(PlayerStatTypes.PTS)))));
             box.getChildren().add(new HBox(10, Utils.getBoldLabel("Most Assists"),
                     Utils.getBoldLabel(topAssist.getName()), Utils.getBoldLabel("Assists per Game:"),
-                    Utils.getBoldLabel(String.valueOf(topAssist.getStatContainer().getAvgValueOfStat(PlayerStat.ASSIST)))));
+                    Utils.getBoldLabel(String.valueOf(topAssist.getAvgValueOfPlayerStat(PlayerStatTypes.ASSIST)))));
             box.getChildren().add(new HBox(10, Utils.getBoldLabel("Most Offensive Rebounds"),
                     Utils.getBoldLabel(topOffReb.getName()), Utils.getBoldLabel("Off. Rebounds per Game:"),
-                    Utils.getBoldLabel(String.valueOf(topOffReb.getStatContainer().getAvgValueOfStat(PlayerStat.ORB)))));
+                    Utils.getBoldLabel(String.valueOf(topOffReb.getAvgValueOfPlayerStat(PlayerStatTypes.ORB)))));
             box.getChildren().add(new HBox(10, Utils.getBoldLabel("Most Defensive Rebounds"),
                     Utils.getBoldLabel(topDefReb.getName()), Utils.getBoldLabel("Def. Rebounds per Game:"),
-                    Utils.getBoldLabel(String.valueOf(topDefReb.getStatContainer().getAvgValueOfStat(PlayerStat.DRB)))));
+                    Utils.getBoldLabel(String.valueOf(topDefReb.getAvgValueOfPlayerStat(PlayerStatTypes.DRB)))));
             box.getChildren().add(new HBox(10, Utils.getBoldLabel("Most Steals"),
                     Utils.getBoldLabel(topStl.getName()), Utils.getBoldLabel("Steals per Game:"),
-                    Utils.getBoldLabel(String.valueOf(topStl.getStatContainer().getAvgValueOfStat(PlayerStat.STL)))));
+                    Utils.getBoldLabel(String.valueOf(topStl.getAvgValueOfPlayerStat(PlayerStatTypes.STL)))));
             box.getChildren().add(new HBox(10, Utils.getBoldLabel("Most Blocks"),
                     Utils.getBoldLabel(topBlock.getName()), Utils.getBoldLabel("Blocks per Game :"),
-                    Utils.getBoldLabel(String.valueOf(topBlock.getStatContainer().getAvgValueOfStat(PlayerStat.BLK)))));
+                    Utils.getBoldLabel(String.valueOf(topBlock.getAvgValueOfPlayerStat(PlayerStatTypes.BLK)))));
             getRootPane().setCenter(box);
         });
     }
@@ -509,7 +482,7 @@ class MainMenuGUI extends AbstractGUI {
     private void setupLowBox() {
         HBox hBox = new HBox(5);
         hBox.getChildren().add(Utils.getBoldLabel("Other Teams"));
-        for (Team t : LeagueFunctions.getAllTeams()) {
+        for (Team t : League.getInstance().getTeams()) {
             if (t == getUserTeam())
                 continue;
             Button b = new Button(t.getName());

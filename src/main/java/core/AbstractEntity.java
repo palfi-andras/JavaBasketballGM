@@ -1,14 +1,24 @@
 package core;
 
-import gameplay.StatContainer;
-import org.json.simple.JSONObject;
+import attributes.GameAttributes;
+import attributes.LeagueAttributes;
+import attributes.PlayerAttributes;
+import attributes.PlayerStatTypes;
+import attributes.TeamAttributes;
+import attributes.TeamStatTypes;
+import javafx.collections.FXCollections;
+import javafx.collections.MapChangeListener;
+import javafx.collections.ObservableMap;
+import utilities.DatabaseConnection;
+import utilities.Utils;
 
-import java.io.Serializable;
-import java.util.HashMap;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.LinkedHashMap;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.Map;
-import java.util.Set;
-
-import static java.lang.Math.toIntExact;
 
 /**
  * CS -622
@@ -20,40 +30,57 @@ import static java.lang.Math.toIntExact;
  * @author Andras Palfi apalfi@bu.edu
  * @version 1.0
  */
-public class AbstractEntity implements Entity, Serializable {
-    // Each abstract Entity is required to have a name, id, and a map of attributes
+public class AbstractEntity implements Entity {
+
+    String tableName;
+    String idName;
     private String entityName;
     private int id;
-    private Map<String, Double> entityAttributes = new HashMap<>();
-    private StatContainer statContainer = new StatContainer();
+    private ObservableMap<String, Object> entityAttributes;
 
-    /**
-     * Constructors
-     */
-    AbstractEntity(int id) {
-        setID(id);
+    AbstractEntity(int id, String name, String idName, String tableName) throws SQLException {
+        this.id = id;
+        this.entityName = name;
+        this.idName = idName;
+        this.tableName = tableName;
+        if (!entityExistsInDatabase()) {
+            createEntityInDatabase(id, name);
+            entityAttributes = FXCollections.synchronizedObservableMap(FXCollections.observableHashMap());
+            entityAttributes.addListener((MapChangeListener<String, Object>) change -> {
+                if (change.wasAdded())
+                    updateEntityAttribute(change.getKey(), change.getValueAdded());
+                else if (change.wasRemoved())
+                    updateEntityAttribute(change.getKey(), null);
+            });
+            initializeAttributes();
+        } else {
+            reloadEntityAttributes();
+        }
     }
 
-    AbstractEntity(int id, String name) {
-        setID(id);
-        setEntityName(name);
+    @Override
+    public boolean entityExistsInDatabase() throws SQLException {
+        String sql = "SELECT EXISTS(SELECT 1 FROM " + tableName + " WHERE " + idName + "=" + id + ");";
+        ResultSet rs = DatabaseConnection.getInstance().executeQuery(sql);
+        if (rs == null)
+            return false;
+        return rs.getInt(1) == 1;
     }
 
-    /**
-     * Creates an AbstractEntity from a JSONObject, throwing a LeagueLoadException if the name and id field are not found
-     * in the json file
-     *
-     * @param json json object to load entity from
-     * @return new AbstractEntity with id and name
-     * @throws Utils.LeagueLoadException if id and name not found
-     */
-    static AbstractEntity loadEntityFromJSON(JSONObject json) throws Utils.LeagueLoadException {
-        if (!json.containsKey("name"))
-            throw new Utils.LeagueLoadException("name", json);
-        if (!json.containsKey("id"))
-            throw new Utils.LeagueLoadException("id", json);
-        return new AbstractEntity(toIntExact((Long) json.get("id")), (String) json.get("name"));
+    @Override
+    public boolean entityCanHaveStats() {
+        return this instanceof Team || this instanceof Player;
     }
+
+    @Override
+    public double getAvgValueOfStatForEntity(String stat) {
+        assert entityCanHaveStats();
+        if (this instanceof Team)
+            return ((Team) this).getAvgValueOfTeamStat(TeamStatTypes.valueOf(stat));
+        else
+            return ((Player) this).getAvgValueOfPlayerStat(PlayerStatTypes.valueOf(stat));
+    }
+
 
     /**
      * Getters and Setters for all member variables
@@ -67,6 +94,7 @@ public class AbstractEntity implements Entity, Serializable {
     @Override
     public void setEntityName(String name) {
         this.entityName = name;
+
     }
 
     @Override
@@ -80,77 +108,110 @@ public class AbstractEntity implements Entity, Serializable {
     }
 
     @Override
-    public Map<String, Double> getEntityAttributes() {
+    public ObservableMap<String, Object> getEntityAttributes() {
         return entityAttributes;
     }
 
-    @Override
-    public void setEntityAttributes(Map<String, Double> attributes) {
-        this.entityAttributes = attributes;
-    }
-
-    /**
-     * Checks whether an attribute exists for this entity
-     *
-     * @param attribute the attribute to find
-     * @return true if the attribute is in the map, false otherwise
-     */
     @Override
     public boolean entityAttributeExists(String attribute) {
         return entityAttributes.containsKey(attribute);
     }
 
-    /**
-     * Set an entity attribute
-     *
-     * @param attribute the attribute to set
-     * @param value     the value to set the attribute to
-     */
     @Override
-    public void setEntityAttribute(String attribute, double value) {
+    public void setEntityAttribute(String attribute, Object value) {
         getEntityAttributes().put(attribute, value);
     }
 
-    /**
-     * @param attribute the entity attribute to find
-     * @return value of the attribute
-     */
     @Override
-    public double getEntityAttribute(String attribute) {
+    public void updateEntityAttribute(String attribute, Object value) {
+        DatabaseConnection.getInstance().
+                executeSQL("UPDATE " + tableName + " SET " + attribute + "=" + value + " WHERE " + idName + "=" + getID());
+    }
+
+
+    @Override
+    public Object getEntityAttribute(String attribute) {
         assert entityAttributeExists(attribute);
         return getEntityAttributes().get(attribute);
     }
 
-    /**
-     * Create a JSON Object representation of this Abstract Entity
-     * so that it can be preserved
-     *
-     * @return JSONObject
-     */
+
     @Override
-    public JSONObject getJSONObject() {
-        JSONObject json = new JSONObject();
-        json.put("id", this.getID());
-        json.put("name", this.getName());
-        Set<String> attrs = this.getEntityAttributes().keySet();
-        for (String attr : attrs)
-            json.put(attr, this.getEntityAttribute(attr));
-        return json;
+    public void createEntityInDatabase(int id, String name) {
+        String sql = "INSERT INTO " + tableName + "(" + idName + ", name) VALUES(?, ?);";
+        PreparedStatement statement = DatabaseConnection.getInstance().getBlankPreparedStatement(sql);
+        try {
+            statement.setInt(1, id);
+            statement.setString(2, name);
+            statement.execute();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+
     }
 
     @Override
-    public String getJSONString() {
-        return getJSONObject().toJSONString();
+    public void initializeAttributes() {
+        for (String attribute : getAttributeNames()) {
+            setEntityAttribute(attribute, Utils.getRandomDouble());
+        }
     }
 
     @Override
-    public StatContainer getStatContainer() {
-        return statContainer;
+    public void reloadEntityAttributes() {
+        Map<String, Object> attributes = new LinkedHashMap<>();
+        for (String attr : getAttributeNames()) {
+            ResultSet resultSet = DatabaseConnection.getInstance().executeQuery("SELECT " +
+                    attr + " from " + tableName + " WHERE " + idName + "=" + getID());
+            try {
+                attributes.put(attr, resultSet.getObject(attr));
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+            entityAttributes = FXCollections.synchronizedObservableMap(FXCollections.observableMap(attributes));
+        }
     }
 
     @Override
-    public void setStatContainer(StatContainer statContainer) {
-        this.statContainer = statContainer;
+    public List<String> getAttributeNames() {
+        List<String> names = new LinkedList<>();
+        if (this instanceof Player) {
+            for (PlayerAttributes a : PlayerAttributes.values())
+                names.add(a.toString());
+            return names;
+        }
+
+        if (this instanceof Team) {
+            for (TeamAttributes a : TeamAttributes.values())
+                names.add(a.toString());
+            return names;
+        }
+
+
+        if (this instanceof League) {
+            for (LeagueAttributes a : LeagueAttributes.values())
+                names.add(a.toString());
+            return names;
+        }
+
+        if (this instanceof GameSimulation) {
+            for (GameAttributes a : GameAttributes.values())
+                names.add(a.toString());
+            return names;
+        }
+
+        if (this instanceof PlayerStat) {
+            for (PlayerStatTypes statType : PlayerStatTypes.values())
+                names.add(statType.toString());
+            return names;
+        }
+
+        if (this instanceof TeamStat) {
+            for (TeamStatTypes statType : TeamStatTypes.values())
+                names.add(statType.toString());
+            return names;
+        }
+        throw new RuntimeException("Unknown or Abstract Entity Type");
     }
 
 

@@ -1,16 +1,14 @@
 package core;
 
-import gameplay.GameSimulation;
+import attributes.PlayerAttributes;
+import utilities.Utils;
 
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
-import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 
 /**
  * CS-622
@@ -23,48 +21,17 @@ import java.util.Objects;
  */
 public class LeagueFunctions {
 
-    public static List<Team> getAllTeams() {
-        List<Team> teams = new LinkedList<>();
-        for (int t : League.getInstance().getTeamEntityIndexes())
-            teams.add((Team) League.getInstance().getEntities().get(t));
-        return teams;
-    }
-
-    public static Team getTeam(int id) {
-        return (Team) League.getInstance().getEntity(id);
-    }
-
-    public static Team getTeam(Team team) {
-        return getTeam(team.getID());
-    }
-
-    public static Team getTeam(String teamName) {
-        for (Team t : getAllTeams()) {
-            if (Objects.equals(teamName, t.toString()))
-                return t;
-        }
-        return null;
-    }
 
     public static Team getPlayerTeam(Player p) {
-        for (Team t : getAllTeams())
-            if (t.getRoster().contains(p))
-                return t;
-        return null;
+        return League.getInstance().getTeam((int) p.getEntityAttribute(PlayerAttributes.TEAM_ID.toString()));
     }
 
-    public static Player getPlayer(int pid) {
-        Player p = null;
-        for (Player player : getAllPlayers())
-            if (player.getID() == pid)
-                p = player;
-        return p;
+    public static List<Player> getBestPlayers() {
+        List<Player> players = new LinkedList<>(League.getInstance().getPlayers());
+        players.sort(Comparator.comparingInt(Player::getOverallPlayerRating));
+        Collections.reverse(players);
+        return players;
     }
-
-    public static int getRosterSize(Team t) {
-        return getTeam(t.getID()).getRoster().size();
-    }
-
 
     public static List<GameSimulation> getAllGames() {
         return League.getInstance().getGames();
@@ -109,23 +76,10 @@ public class LeagueFunctions {
         return getGamesForTeam(team).get(getNumOfGamesPlayedForTeam(team));
     }
 
-    public static List<Player> getAllPlayers() {
-        List<Player> players = new LinkedList<>();
-        for (int p : League.getInstance().getPlayerEntityIndexes())
-            players.add((Player) League.getInstance().getEntities().get(p));
-        return players;
-    }
-
-    public static List<Player> getBestPlayers() {
-        List<Player> players = getAllPlayers();
-        players.sort(Comparator.comparingInt(Player::getOverallPlayerRating));
-        Collections.reverse(players);
-        return players;
-    }
 
     public static List<Player> getFreeAgents() {
         List<Player> freeAgents = new LinkedList<>(getBestPlayers());
-        for (Team t : getAllTeams())
+        for (Team t : League.getInstance().getTeams())
             for (Player p : t.getRoster())
                 freeAgents.remove(p);
         return freeAgents;
@@ -134,31 +88,6 @@ public class LeagueFunctions {
     public static Player getBestAvailableFreeAgent() {
         return (getFreeAgents().size() > 0) ? getFreeAgents().get(0) : null;
     }
-
-
-    public static Player getPlayer(String name) {
-        for (Player p : getAllPlayers()) {
-            if (p.getName() == name)
-                return p;
-        }
-        return null;
-    }
-
-
-    public static Map<Player, Double> getHighestPPGInTeam(Team team) {
-        List<Player> ppgs = new ArrayList<>(team.getRoster());
-        return sortListOfPlayersBasedOnPPG(ppgs);
-    }
-
-    private static Map<Player, Double> sortListOfPlayersBasedOnPPG(List<Player> ppgs) {
-        ppgs.sort(Comparator.comparingDouble(Player::getPlayerPointsPerGame));
-        Collections.reverse(ppgs);
-        Map<Player, Double> map = new LinkedHashMap<>();
-        for (Player p : ppgs)
-            map.put(p, p.getPlayerPointsPerGame());
-        return map;
-    }
-
 
     /**
      * Returns an int array representing the win-loss record of a team. Format:
@@ -202,17 +131,9 @@ public class LeagueFunctions {
      * Simulate a game in the league
      */
     public static void simulateGame(GameSimulation gs) {
-        League.getInstance().recordGameResult(gs.simulateGame());
-        League.getInstance().recordStats(gs);
+        gs.simulateGame();
     }
 
-
-    public static boolean allGamesOver() {
-        for (GameSimulation g : getAllGames())
-            if (!g.gameIsOver())
-                return false;
-        return true;
-    }
 
     /**
      * Releases a player from their team and into free agency
@@ -226,7 +147,7 @@ public class LeagueFunctions {
     public static double getLeagueAvgTeamOvrRating() {
         int count = 0;
         double avg = 0.0;
-        for (Team t : getAllTeams()) {
+        for (Team t : League.getInstance().getTeams()) {
             if (t.getRoster().size() <= 0)
                 continue;
             count++;

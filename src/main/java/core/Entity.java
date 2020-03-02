@@ -1,9 +1,9 @@
 package core;
 
-import gameplay.StatContainer;
-import org.json.simple.JSONObject;
+import javafx.collections.ObservableMap;
 
-import java.util.Map;
+import java.sql.SQLException;
+import java.util.List;
 
 /**
  * CS-622
@@ -26,22 +26,27 @@ public interface Entity {
 
     void setID(int id);
 
-    Map<String, Double> getEntityAttributes();
-
-    void setEntityAttributes(Map<String, Double> attributes);
+    ObservableMap<String, Object> getEntityAttributes();
 
     boolean entityAttributeExists(String attribute);
 
-    void setEntityAttribute(String attribute, double value);
+    void setEntityAttribute(String attribute, Object value);
 
-    double getEntityAttribute(String attribute);
+    void updateEntityAttribute(String attribute, Object value);
 
-    JSONObject getJSONObject();
+    Object getEntityAttribute(String attribute);
 
-    String getJSONString();
+    void createEntityInDatabase(int id, String name);
 
-    StatContainer getStatContainer();
+    void initializeAttributes();
 
-    void setStatContainer(StatContainer statContainer);
+    void reloadEntityAttributes();
 
+    List<String> getAttributeNames();
+
+    boolean entityExistsInDatabase() throws SQLException;
+
+    boolean entityCanHaveStats();
+
+    double getAvgValueOfStatForEntity(String stat);
 }

@@ -3,6 +3,7 @@ package core;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
+import utilities.Utils;
 
 import java.util.Iterator;
 import java.util.LinkedHashMap;
@@ -24,17 +25,28 @@ public class Draft {
     // The current pick number
     public int pickNum = 0;
     // To find out the order of teams drafting, we store an iterator of the teams
-    private Iterator<Team> draftOrder = LeagueFunctions.getAllTeams().iterator();
+    private Iterator<Team> draftOrder = new LinkedList<>(League.getInstance().getTeams()).iterator();
     // A map of teams and the players they drafted with each pick number
     private Map<Team, Map<Player, Integer>> draftRecap = new LinkedHashMap<>();
 
     public Draft() {
         // Check to make sure the draft is not yet over
-        assert !League.getInstance().draftIsOver();
+        assert !draftIsDone();
 
-        for (Team t : LeagueFunctions.getAllTeams()) {
-            assert 0 >= LeagueFunctions.getRosterSize(t);
+        for (Team t : League.getInstance().getTeams()) {
+            assert 0 >= t.getRosterSize();
             draftRecap.put(t, new LinkedHashMap<>());
+        }
+    }
+
+    /**
+     * Performs an automated draft of the league. Each team takes turns drafting players until their roster is filled up.
+     */
+    public void automatedDraft() {
+        List<Player> bestPlayers = LeagueFunctions.getBestPlayers();
+        while (!draftIsDone()) {
+            for (Team t : League.getInstance().getTeams())
+                t.addPlayerToRoster(bestPlayers.remove(0));
         }
     }
 
@@ -55,7 +67,7 @@ public class Draft {
      */
     private void resetDraftOrder() {
         List<Team> teams = new LinkedList<>();
-        for (Team t : LeagueFunctions.getAllTeams())
+        for (Team t : League.getInstance().getTeams())
             if (t.getRoster().size() < League.PLAYERS_PER_TEAM)
                 teams.add(t);
         draftOrder = teams.iterator();
@@ -67,7 +79,7 @@ public class Draft {
      * @return boolean
      */
     public boolean draftIsDone() {
-        for (Team t : LeagueFunctions.getAllTeams())
+        for (Team t : League.getInstance().getTeams())
             if (t.getRoster().size() < League.PLAYERS_PER_TEAM)
                 return false;
         return true;
@@ -83,9 +95,8 @@ public class Draft {
         if (p == null)
             return;
         assert LeagueFunctions.getFreeAgents().contains(p);
-        assert LeagueFunctions.getRosterSize(t) < League.PLAYERS_PER_TEAM;
-        LeagueFunctions.getTeam(t).addPlayerToRoster(p);
-        League.getInstance().initializeAttributes(LeagueFunctions.getTeam(t));
+        assert t.getRosterSize() < League.PLAYERS_PER_TEAM;
+        t.addPlayerToRoster(p);
         draftRecap.get(t).put(p, pickNum + 1);
         pickNum++;
     }
@@ -116,7 +127,7 @@ public class Draft {
     }
 
     public TableView<Entity> createDraftOrderTable() {
-        List<Entity> teams = new LinkedList<>(LeagueFunctions.getAllTeams());
+        List<Entity> teams = new LinkedList<>(League.getInstance().getTeams());
         TableView<Entity> order = Utils.createEntityTable();
         order.getColumns().remove(1);
         order.getItems().addAll(teams);

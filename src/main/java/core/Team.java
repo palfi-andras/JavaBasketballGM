@@ -1,14 +1,26 @@
 package core;
 
-import gameplay.PlayerStat;
-import gameplay.StatContainer;
-import gameplay.TeamStat;
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
+import attributes.PlayerAttributes;
+import attributes.PlayerStatTypes;
+import attributes.TeamAttributes;
+import attributes.TeamStatTypes;
+import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream;
+import javafx.collections.FXCollections;
+import javafx.collections.ListChangeListener;
+import javafx.collections.ObservableList;
+import utilities.DatabaseConnection;
 
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.AbstractMap;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -23,51 +35,116 @@ import java.util.Map;
  * @version 1.0
  */
 public class Team extends AbstractEntity {
-    private static final String pathToCitiesCSV = "./resources/us-cities.csv";
-    // Store a list of players on this team
-    private List<Player> roster = new LinkedList<>();
 
-    Team(int id) {
-        super(id);
+    public static final List<TeamAttributes> NON_GAME_RELATED_ATTRS = Arrays.asList(TeamAttributes.ROSTER);
+    private List<TeamStat> teamStats = new LinkedList<>();
+
+    public Team(int id, String name) throws SQLException {
+        super(id, name, "tid", "teams");
+        ResultSet statEntries = DatabaseConnection.getInstance().getStatEntriesForTeam(id);
+        while (statEntries.next())
+            teamStats.add(new TeamStat(statEntries.getInt("tid"), statEntries.getInt("gid")));
     }
 
-    private Team(AbstractEntity previous) {
-        super(previous.getID(), previous.getName());
-        setEntityAttributes(previous.getEntityAttributes());
-        setStatContainer(new StatContainer<TeamStat, Integer>());
-    }
+    @Override
+    public void initializeAttributes() {
+        // First initialize the Team roster attribute
+        ObservableList<Player>
+                roster = FXCollections.observableArrayList();
+        // The roster attribute stores an observable list. Whenever a player
+        // is added to this team, the Team Attributes are re calculated with the
+        // new players individual attributes taken into consideration
+        roster.addListener((ListChangeListener<Player>) change -> {
+            while (change.next()) {
+                if (change.wasAdded())
+                    for (Player p : change.getAddedSubList())
+                        p.setEntityAttribute("TEAM_ID", getID());
 
-    static String getPathToCitiesCSV() {
-        return pathToCitiesCSV;
-    }
+                if (change.wasRemoved())
+                    for (Player p : change.getRemoved())
+                        p.setEntityAttribute("TEAM_ID", null);
 
-    /**
-     * Loads a team object from a JSON object
-     */
-    static Team loadTeamFromJSON(JSONObject json) throws Utils.LeagueLoadException {
-        Team entity = new Team(AbstractEntity.loadEntityFromJSON(json));
-        for (TeamAttributes attr : TeamAttributes.values()) {
-            if (!json.containsKey(attr.toString())) {
-                throw new Utils.LeagueLoadException(attr.toString(), json);
-            } else {
-                entity.setEntityAttribute(attr.toString(), (double) json.get(attr.toString()));
+                for (String attr : getAttributeNames()) {
+                    try {
+                        PlayerAttributes a = PlayerAttributes.valueOf(attr);
+                        double avg = 0.0;
+                        for (Player p : getRoster())
+                            avg += (Double) p.getEntityAttribute(a.toString());
+                        setEntityAttribute(a.toString(), avg / getRosterSize());
+                    } catch (IllegalArgumentException ex) {
+                        continue;
+                    }
+                }
+                setEntityAttribute(TeamAttributes.ROSTER.toString(), roster);
+            }
+        });
+        setEntityAttribute(TeamAttributes.ROSTER.toString(), roster);
+        // Now initialize all other attributes, which are basically averages of player attributes for this team
+        for (String attribute : getAttributeNames()) {
+            if (!NON_GAME_RELATED_ATTRS.contains(TeamAttributes.valueOf(attribute))) {
+                PlayerAttributes a = PlayerAttributes.valueOf(attribute);
+                double avg = 0.0;
+                if (getRosterSize() > 0) {
+                    for (Player p : getRoster())
+                        avg += (Double) p.getEntityAttribute(attribute);
+                    setEntityAttribute(attribute, avg / getRoster().size());
+                } else {
+                    setEntityAttribute(attribute, avg);
+                }
             }
         }
-        if (!json.containsKey("players"))
-            throw new Utils.LeagueLoadException("players", json);
-        JSONArray players = (JSONArray) json.get("players");
-        for (Object player : players) {
-            entity.addPlayerToRoster(Player.loadPlayerFromJSON((JSONObject) player));
+    }
+
+    @Override
+    public void updateEntityAttribute(String attribute, Object value) {
+        if (!NON_GAME_RELATED_ATTRS.contains(TeamAttributes.valueOf(attribute)))
+            super.updateEntityAttribute(attribute, value);
+        else {
+            assert attribute.equals("ROSTER");
+            try {
+                ByteOutputStream bos = new ByteOutputStream();
+                ObjectOutputStream oos = new ObjectOutputStream(bos);
+                oos.writeObject(new LinkedList<Player>((ObservableList<Player>) value));
+                byte[] byteArray = bos.getBytes();
+                String sql = "UPDATE teams set ROSTER=? where tid=?";
+                PreparedStatement statement = DatabaseConnection.getInstance().getBlankPreparedStatement(sql);
+                try {
+                    statement.setBytes(1, byteArray);
+                    statement.setInt(2, getID());
+                    statement.execute();
+                } catch (SQLException e) {
+                    e.printStackTrace();
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
-        return entity;
     }
 
-    public List<Player> getRoster() {
-        return roster;
+    @Override
+    public void reloadEntityAttributes() {
+        Map<String, Object> attributes = new LinkedHashMap<>();
+        for (String attr : getAttributeNames()) {
+            ResultSet resultSet = DatabaseConnection.getInstance().executeQuery("SELECT " +
+                    attr + " from " + tableName + " WHERE " + idName + "=" + getID());
+            try {
+                if (!Team.NON_GAME_RELATED_ATTRS.contains(TeamAttributes.valueOf(attr))) {
+                    attributes.put(attr, resultSet.getObject(attr));
+                } else {
+                    ObjectInputStream ois = new ObjectInputStream(resultSet.getBinaryStream(1));
+                    ObservableList<Player> roster = FXCollections.observableArrayList((List<Player>) ois.readObject());
+                    attributes.put(attr, roster);
+                }
+            } catch (SQLException | IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+            }
+
+        }
     }
 
-    void setRoster(List<Player> roster) {
-        this.roster = roster;
+
+    public ObservableList<Player> getRoster() {
+        return (ObservableList<Player>) getEntityAttribute(TeamAttributes.ROSTER.toString());
     }
 
     public List<Player> getRankedRoster() {
@@ -84,9 +161,10 @@ public class Team extends AbstractEntity {
      */
     public List<Player> getSortedRosterBasedOffPlayerAttributes(PlayerAttributes attr) {
 
+        assert !Player.NON_GAME_RELATED_ATTRS.contains(attr);
         List<Map.Entry<Player, Double>> sortedRoster = new LinkedList<>();
         for (Player p : getRoster()) {
-            sortedRoster.add(new AbstractMap.SimpleEntry<>(p, p.getPlayerAttribute(attr)));
+            sortedRoster.add(new AbstractMap.SimpleEntry<Player, Double>(p, (Double) p.getEntityAttribute(attr.toString())));
         }
         Collections.sort(sortedRoster, Comparator.comparing(Map.Entry::getValue));
         List<Player> sorted = new LinkedList<>();
@@ -97,14 +175,14 @@ public class Team extends AbstractEntity {
         return sorted;
     }
 
-    public List<Player> getSortedRosterBasedOffPlayerAvgStats(PlayerStat stat) {
-        List<Map.Entry<Player, Integer>> sortedRoster = new LinkedList<>();
+    public List<Player> getSortedRosterBasedOffPlayerAvgStats(PlayerStatTypes stat) {
+        List<Map.Entry<Player, Double>> sortedRoster = new LinkedList<>();
         for (Player p : getRoster())
             sortedRoster.add(new AbstractMap.SimpleEntry<>
-                    (p, (Integer) p.getStatContainer().getAvgValueOfStat(stat)));
-        Collections.sort(sortedRoster, Comparator.comparingInt(Map.Entry::getValue));
+                    (p, (Double) p.getAvgValueOfPlayerStat(stat)));
+        Collections.sort(sortedRoster, Comparator.comparingDouble(Map.Entry::getValue));
         List<Player> sorted = new LinkedList<>();
-        for (Map.Entry<Player, Integer> entry : sortedRoster)
+        for (Map.Entry<Player, Double> entry : sortedRoster)
             sorted.add(entry.getKey());
         Collections.reverse(sorted);
         return sorted;
@@ -125,19 +203,16 @@ public class Team extends AbstractEntity {
         getRoster().remove(p);
     }
 
-    int getRosterSize() {
+    public int getRosterSize() {
         return getRoster().size();
     }
 
-    /**
-     * Returns the overall rating of this team which is the average of all of its players overall ratings
-     *
-     * @return
-     */
+
     public double getOverallTeamRating() {
         double sum = 0.0;
-        for (double attrVal : getEntityAttributes().values())
-            sum += attrVal;
+        for (Map.Entry<String, Object> a : getEntityAttributes().entrySet())
+            if (!NON_GAME_RELATED_ATTRS.contains(TeamAttributes.valueOf(a.getKey())))
+                sum += (Double) a.getValue();
         return (int) ((sum / getEntityAttributes().size()) * 100);
     }
 
@@ -149,23 +224,30 @@ public class Team extends AbstractEntity {
             p.setPlayerEnergy(1.0);
     }
 
-    public int getSumOfTeamStat(TeamStat stat) {
-        return (Integer) getStatContainer().getSumOfStatContainer(stat);
+
+    public List<TeamStat> getTeamStats() {
+        return teamStats;
     }
 
-    @Override
-    public JSONObject getJSONObject() {
-        JSONObject json = super.getJSONObject();
-        JSONArray players = new JSONArray();
-        for (Player p : getRoster())
-            players.add(p.getJSONObject());
-        json.put("players", players);
-        return json;
+    public TeamStat getTeamStat(int gid) {
+        for (TeamStat stat : getTeamStats())
+            if (stat.getGid() == gid)
+                return stat;
+        return null;
     }
 
-    @Override
-    public String getJSONString() {
-        return getJSONObject().toString();
+    public void addTeamStat(TeamStat stat) {
+        teamStats.add(stat);
     }
 
+    public double getAvgValueOfTeamStat(TeamStatTypes statType) {
+        return getSumOfTeamStat(statType) / getTeamStats().size();
+    }
+
+    public int getSumOfTeamStat(TeamStatTypes statType) {
+        int sum = 0;
+        for (TeamStat stat : getTeamStats())
+            sum += (int) stat.getEntityAttribute(statType.toString());
+        return sum;
+    }
 }

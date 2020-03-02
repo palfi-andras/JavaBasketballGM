@@ -1,13 +1,12 @@
 package application;
 
+import attributes.TeamAttributes;
 import core.Draft;
 import core.Entity;
 import core.League;
 import core.LeagueFunctions;
 import core.Player;
 import core.Team;
-import core.TeamAttributes;
-import core.Utils;
 import javafx.geometry.Insets;
 import javafx.geometry.Orientation;
 import javafx.geometry.Pos;
@@ -26,6 +25,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import utilities.Utils;
 
 import java.util.Optional;
 
@@ -116,8 +116,8 @@ class DraftGUI extends AbstractGUI {
                 @Override
                 public void updateItem(String item, boolean empty) {
                     super.updateItem(item, empty);
-                    boolean highlighted = LeagueFunctions.getAllTeams().indexOf(LeagueFunctions.getTeam(item))
-                            % LeagueFunctions.getAllTeams().size() == draft.pickNum;
+                    boolean highlighted = League.getInstance().getTeams().indexOf(League.getInstance().getTeam(item))
+                            % League.getInstance().getTeams().size() == draft.pickNum;
                     if (highlighted)
                         setStyle("-fx-background-color: #b8e9ff;");
                     setText(item);
@@ -145,7 +145,7 @@ class DraftGUI extends AbstractGUI {
      * @param refresh boolean: If set to true, will reload the DraftGUI.
      */
     private void performDraftAction(Player p, Team t, boolean refresh) {
-        if (LeagueFunctions.getRosterSize(userTeam) == League.PLAYERS_PER_TEAM) {
+        if (userTeam.getRosterSize() == League.PLAYERS_PER_TEAM) {
             while (!draft.draftIsDone()) {
                 draft.draftPlayer(LeagueFunctions.getBestAvailableFreeAgent(), nowPicking);
                 if (!draft.draftIsDone())
@@ -177,7 +177,7 @@ class DraftGUI extends AbstractGUI {
      */
     private void setBottom() {
         getRootPane().setBottom(Utils.getTitleLabel(String.format("Team Size: %d/%d",
-                LeagueFunctions.getRosterSize(userTeam), League.PLAYERS_PER_TEAM)));
+                userTeam.getRosterSize(), League.PLAYERS_PER_TEAM)));
         BorderPane.setAlignment(getRootPane().getBottom(), Pos.CENTER);
     }
 
@@ -199,7 +199,7 @@ class DraftGUI extends AbstractGUI {
             box.getChildren().add(new HBox(8,
                     Utils.getBoldLabel(a.toString()),
                     Utils.getStandardLabel(String.valueOf(
-                            Utils.round(LeagueFunctions.getTeam(userTeam).getEntityAttribute(a.toString()), 2)
+                            Utils.round((Double) userTeam.getEntityAttribute(a.toString()), 2)
                     ))));
         box.setPrefWidth(275);
         box.getChildren().add(new Separator(Orientation.HORIZONTAL));
@@ -210,7 +210,7 @@ class DraftGUI extends AbstractGUI {
         l2.setWrapText(true);
         box.getChildren().add(l2);
         box.getChildren().add(new HBox(10, Utils.getStandardLabel("Your Team Ovr: "),
-                Utils.getStandardLabel(String.valueOf(LeagueFunctions.getTeam(userTeam).getOverallTeamRating()))));
+                Utils.getStandardLabel(String.valueOf(userTeam.getOverallTeamRating()))));
         box.getChildren().add(new HBox(10, Utils.getStandardLabel("League Avg. Team Ovr: "),
                 Utils.getStandardLabel(String.valueOf(LeagueFunctions.getLeagueAvgTeamOvrRating()))));
 

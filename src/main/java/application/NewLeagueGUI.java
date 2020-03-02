@@ -1,9 +1,8 @@
 package application;
 
 
-import core.DatabaseConnection;
+import core.Draft;
 import core.League;
-import core.LeagueFunctions;
 import core.Team;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
@@ -16,7 +15,9 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
+import utilities.DatabaseConnection;
 
+import java.sql.SQLException;
 import java.util.Optional;
 
 /**
@@ -30,9 +31,14 @@ import java.util.Optional;
  */
 class NewLeagueGUI extends AbstractGUI {
 
-    NewLeagueGUI(Stage primaryStage, boolean clearExisting) {
+    NewLeagueGUI(Stage primaryStage, boolean clearExisting, String saveFilePath) {
         super();
-        DatabaseConnection.getInstance(clearExisting);
+        DatabaseConnection.getInstance(saveFilePath, clearExisting);
+        try {
+            League.getInstance(League.getNextUniqueKey(), saveFilePath.replace(".db", ""));
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
         Label label1 = new Label("Select Your Team");
         label1.setFont(Font.font("Arial", 36));
         label1.setPadding(new Insets(10, 0, 10, 0));
@@ -43,7 +49,7 @@ class NewLeagueGUI extends AbstractGUI {
         pane.setHgap(4);
         pane.setPrefWrapLength(170);
 
-        for (Team t : LeagueFunctions.getAllTeams()) {
+        for (Team t : League.getInstance().getTeams()) {
             Button button = new Button(t.getName());
             button.setOnAction(e -> {
                 ButtonType manualDraft = new ButtonType("Manual Draft", ButtonBar.ButtonData.YES);
@@ -55,7 +61,7 @@ class NewLeagueGUI extends AbstractGUI {
                 alert.setHeaderText("Would you like to draft the team?");
                 Optional<ButtonType> results = alert.showAndWait();
                 if (results.get() == automatedDraft) {
-                    League.getInstance().automatedDraft();
+                    new Draft().automatedDraft();
                     MainMenuGUI mainMenuGUI = new MainMenuGUI(primaryStage, t);
                     primaryStage.getScene().setRoot(mainMenuGUI.getRootPane());
                 } else {

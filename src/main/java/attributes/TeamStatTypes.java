@@ -1,4 +1,4 @@
-package gameplay;
+package attributes;
 
 /**
  * CS-622
@@ -8,7 +8,7 @@ package gameplay;
  * @author Andras Palfi apalfi@bu.edu
  * @version 1.0
  */
-public enum TeamStat {
+public enum TeamStatTypes {
     TEAM_PTS,
     TEAM_TWO_POINT_MADE,
     TEAM_TWO_POINT_ATTEMPTS,
