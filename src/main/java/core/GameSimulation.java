@@ -4,9 +4,14 @@ import attributes.GameAttributes;
 import attributes.PlayerAttributes;
 import attributes.PlayerStatTypes;
 import attributes.TeamStatTypes;
+import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream;
 import utilities.CoreConfiguration;
+import utilities.DatabaseConnection;
 import utilities.Utils;
 
+import java.io.IOException;
+import java.io.ObjectOutputStream;
+import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -60,22 +65,19 @@ public class GameSimulation extends AbstractEntity {
     Member variables
      */
     private int id; // unique id for this game
-    private Team homeTeam; // the home team
-    private Team awayTeam; // the away team
     private Team teamOnOffense; // used to signify which team is currently on offense
     // A map of each teams current players on court. Each team can have only 5 players on at any given time
     private Map<Team, List<Player>> playersOnCourt;
 
 
     public GameSimulation(Team home, Team away, int gid) throws SQLException {
-        super(gid, String.format("%s vs %s", home.getName(), away.getName()), "gid", "games");
-        // Reset each teams players energy to full energy
-        home.resetEnergyLevels();
-        away.resetEnergyLevels();
+        super(createIDMap(EntityType.GAME_SIMULATION, gid), String.format("%s vs %s", home.getName(), away.getName()), "games");
         // Mark the home and away teams
         setHomeTeam(home);
         setAwayTeam(away);
-
+        // Reset each teams players energy to full energy
+        home.resetEnergyLevels();
+        away.resetEnergyLevels();
         setPlayersOnCourt(new HashMap<>());
         // Place the best 5 players on the court at the start of the game
         setHomePlayersOnCourt(new ArrayList<>(getHomeTeam().getRankedRoster().subList(0, 5)));
@@ -85,9 +87,29 @@ public class GameSimulation extends AbstractEntity {
     @Override
     public void initializeAttributes() {
         setEntityAttribute(GameAttributes.GAME_CLOCK.toString(), 0);
-        setEntityAttribute(GameAttributes.HOME_TEAM.toString(), homeTeam.getID());
-        setEntityAttribute(GameAttributes.AWAY_TEAM.toString(), awayTeam.getID());
+        setEntityAttribute(GameAttributes.HOME_TEAM.toString(), null);
+        setEntityAttribute(GameAttributes.AWAY_TEAM.toString(), null);
         setEntityAttribute(GameAttributes.GAME_LOG.toString(), new LinkedList<>());
+    }
+
+    @Override
+    public void updateEntityAttribute(String attribute, Object value) {
+        if (attribute == GameAttributes.GAME_LOG.toString()) {
+            try {
+                ByteOutputStream bos = new ByteOutputStream();
+                ObjectOutputStream oos = new ObjectOutputStream(bos);
+                byte[] bytes = bos.getBytes();
+                String sql = "UPDATE games set GAME_LOG=? where gid=?";
+                PreparedStatement statement = DatabaseConnection.getInstance().getBlankPreparedStatement(sql);
+                statement.setBytes(1, bytes);
+                statement.setInt(2, getID());
+                statement.execute();
+            } catch (IOException | SQLException e) {
+                e.printStackTrace();
+            }
+            return;
+        }
+        super.updateEntityAttribute(attribute, value);
     }
 
 
@@ -176,7 +198,7 @@ public class GameSimulation extends AbstractEntity {
      * @return Team
      */
     public Team getHomeTeam() {
-        return homeTeam;
+        return League.getInstance().getTeam((Integer) getEntityAttribute(GameAttributes.HOME_TEAM.toString()));
     }
 
     /**
@@ -185,7 +207,7 @@ public class GameSimulation extends AbstractEntity {
      * @param homeTeam Team
      */
     public void setHomeTeam(Team homeTeam) {
-        this.homeTeam = homeTeam;
+        setEntityAttribute(GameAttributes.HOME_TEAM.toString(), homeTeam.getID());
     }
 
     /**
@@ -194,7 +216,7 @@ public class GameSimulation extends AbstractEntity {
      * @return Team
      */
     public Team getAwayTeam() {
-        return awayTeam;
+        return League.getInstance().getTeam((Integer) getEntityAttribute(GameAttributes.AWAY_TEAM.toString()));
     }
 
     /**
@@ -203,7 +225,7 @@ public class GameSimulation extends AbstractEntity {
      * @param awayTeam Team
      */
     public void setAwayTeam(Team awayTeam) {
-        this.awayTeam = awayTeam;
+        setEntityAttribute(GameAttributes.AWAY_TEAM.toString(), awayTeam.getID());
     }
 
     /**

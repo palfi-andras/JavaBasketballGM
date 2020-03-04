@@ -100,9 +100,9 @@ public class Utils {
         return col;
     }
 
-    private static TableColumn<Entity, Double> createEntityAttrTableColumn(String attr) {
-        TableColumn<Entity, Double> col = new TableColumn<>(attr);
-        col.setCellValueFactory(e -> new ReadOnlyObjectWrapper<>((Double) e.getValue().getEntityAttribute(attr)));
+    private static TableColumn<Entity, Number> createEntityAttrTableColumn(String attr) {
+        TableColumn<Entity, Number> col = new TableColumn<>(attr);
+        col.setCellValueFactory(e -> new ReadOnlyObjectWrapper<>((Number) e.getValue().getEntityAttribute(attr)));
         return col;
     }
 

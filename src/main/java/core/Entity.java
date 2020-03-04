@@ -4,6 +4,7 @@ import javafx.collections.ObservableMap;
 
 import java.sql.SQLException;
 import java.util.List;
+import java.util.Map;
 
 /**
  * CS-622
@@ -24,7 +25,10 @@ public interface Entity {
 
     int getID();
 
-    void setID(int id);
+    Map<String, Integer> getIDS();
+
+    String createEntityIDString();
+
 
     ObservableMap<String, Object> getEntityAttributes();
 
@@ -36,7 +40,7 @@ public interface Entity {
 
     Object getEntityAttribute(String attribute);
 
-    void createEntityInDatabase(int id, String name);
+    void createEntityInDatabase();
 
     void initializeAttributes();
 
@@ -49,4 +53,6 @@ public interface Entity {
     boolean entityCanHaveStats();
 
     double getAvgValueOfStatForEntity(String stat);
+
+
 }

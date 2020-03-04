@@ -1,5 +1,7 @@
 package core;
 
+import attributes.LeagueAttributes;
+import attributes.PlayerAttributes;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
@@ -32,7 +34,6 @@ public class Draft {
     public Draft() {
         // Check to make sure the draft is not yet over
         assert !draftIsDone();
-
         for (Team t : League.getInstance().getTeams()) {
             assert 0 >= t.getRosterSize();
             draftRecap.put(t, new LinkedHashMap<>());
@@ -82,7 +83,38 @@ public class Draft {
         for (Team t : League.getInstance().getTeams())
             if (t.getRoster().size() < League.PLAYERS_PER_TEAM)
                 return false;
+        setPlayerSalaries();
         return true;
+    }
+
+    /**
+     * Randomly set all player salaries for each team that just drafted players. Out of the 15 players on each team:
+     * - Best player takes 15 % of the total salary cap for the team
+     * - Next 4 players take  10% each
+     * - Next 5 take divide the remaining salary cap
+     * <p>
+     * Each players contract runs for 3 years by default
+     */
+    public void setPlayerSalaries() {
+        for (Team t : League.getInstance().getTeams()) {
+            List<Player> roster = t.getRankedRoster();
+            int salaryCap = (int) League.getInstance().getEntityAttribute(LeagueAttributes.SALARY_CAP.toString());
+            int amountToSubtract = 0;
+            for (int i = 0; i < roster.size(); i++) {
+                if (i == 0) {
+                    roster.get(0).setEntityAttribute(PlayerAttributes.SALARY_AMOUNT.toString(), salaryCap * 0.15);
+                    amountToSubtract += salaryCap * 0.15;
+                } else if ((i >= 1) && (i <= 4)) {
+                    roster.get(i).setEntityAttribute(PlayerAttributes.SALARY_AMOUNT.toString(), salaryCap * 0.10);
+                    amountToSubtract += salaryCap * 0.10;
+                } else {
+                    salaryCap -= amountToSubtract;
+                    amountToSubtract = 0;
+                    roster.get(i).setEntityAttribute(PlayerAttributes.SALARY_AMOUNT.toString(), salaryCap / 5);
+                }
+                roster.get(0).setEntityAttribute(PlayerAttributes.SALARY_LENGTH.toString(), 3);
+            }
+        }
     }
 
     /**

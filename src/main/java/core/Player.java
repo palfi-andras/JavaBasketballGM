@@ -31,7 +31,7 @@ public class Player extends AbstractEntity {
 
 
     public Player(int id, String name) throws SQLException {
-        super(id, name, "pid", "players");
+        super(createIDMap(EntityType.PLAYER, id), name, "players");
         // Load any previous stats for this player
         ResultSet statEntries = DatabaseConnection.getInstance().getStatEntriesForPlayer(id);
         while (statEntries.next()) {
@@ -72,6 +72,7 @@ public class Player extends AbstractEntity {
         return null;
     }
 
+
     public void addPlayerStat(PlayerStat stat) {
         playerStats.add(stat);
     }
@@ -94,10 +95,13 @@ public class Player extends AbstractEntity {
                 setEntityAttribute(attribute, 1.0);
             else if (attribute.equals("AGE"))
                 setEntityAttribute(attribute, Utils.getRandomDouble(18, 40));
-            else {
-                if (!attribute.contains("SALARY") || attribute.equals("TEAM_ID"))
-                    setEntityAttribute(attribute, Utils.getRandomDouble());
-            }
+            else if (attribute.contains("SALARY"))
+                setEntityAttribute(attribute, 0);
+            else if (attribute.equals("TEAM_ID"))
+                setEntityAttribute(attribute, null);
+            else
+                setEntityAttribute(attribute, Utils.getRandomDouble());
+
         }
     }
 

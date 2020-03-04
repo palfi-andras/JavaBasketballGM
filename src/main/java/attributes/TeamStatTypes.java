@@ -23,5 +23,4 @@ public enum TeamStatTypes {
     TEAM_FREE_THROW_ATTEMPTS,
     TEAM_TOV,
     TEAM_FOULS
-
 }

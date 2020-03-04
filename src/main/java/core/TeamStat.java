@@ -2,6 +2,7 @@ package core;
 
 import utilities.DatabaseConnection;
 
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
@@ -15,32 +16,31 @@ import java.sql.SQLException;
  * achieved in some game in the past. This class aligns itself with the player_stats table in the DB
  */
 public class TeamStat extends AbstractEntity {
-    // Team ID
-    private int tid;
-    // Game ID
-    private int gid;
+
 
     TeamStat(int tid, int gid) throws SQLException {
-        super(League.getInstance().getNextUniqueKey(),
-                String.format("Team %d Stats for Game %d", tid, gid),
-                "tid,gid", "team_stats");
-        this.tid = tid;
-        this.gid = gid;
-    }
-
-    public int getTid() {
-        return tid;
-    }
-
-    public int getGid() {
-        return gid;
+        super(createIDMap(EntityType.TEAM_STAT, tid, gid),
+                String.format("Team %d Stats for Game %d", tid, gid), "team_stats");
     }
 
     @Override
-    public void createEntityInDatabase(int id, String name) {
-        DatabaseConnection.getInstance().executeSQL(
-                "INSERT INTO " + tableName + "(" + idName + ") VALUES (" + tid + "," + gid + ")"
-        );
+    public void createEntityInDatabase() {
+        String sql = "INSERT INTO " + tableName + "(tid,gid,name) VALUES(?,?,?)";
+        PreparedStatement statement = DatabaseConnection.getInstance().getBlankPreparedStatement(sql);
+        try {
+            statement.setInt(1, getIDS().get("tid"));
+            statement.setInt(2, getIDS().get("gid"));
+            statement.setString(3, getName());
+            statement.execute();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+    @Override
+    public void updateEntityAttribute(String attribute, Object value) {
+        DatabaseConnection.getInstance().
+                executeSQL("UPDATE " + tableName + " SET " + attribute + "=" + value + " WHERE tid=" + getIDS().get("tid") + " AND gid=" + getIDS().get("gid"));
     }
 
 
@@ -56,7 +56,7 @@ public class TeamStat extends AbstractEntity {
 
     @Override
     public boolean entityExistsInDatabase() throws SQLException {
-        String sql = "SELECT EXISTS(SELECT 1 FROM " + tableName + " WHERE tid=" + tid + ",gid=" + gid + ");";
+        String sql = "SELECT EXISTS(SELECT 1 FROM " + tableName + " WHERE tid=" + getIDS().get("tid") + " AND gid=" + getIDS().get("gid") + ");";
         ResultSet rs = DatabaseConnection.getInstance().executeQuery(sql);
         if (rs == null)
             return false;

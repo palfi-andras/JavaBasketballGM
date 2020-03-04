@@ -2,6 +2,7 @@ package core;
 
 import utilities.DatabaseConnection;
 
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
@@ -15,39 +16,35 @@ import java.sql.SQLException;
  * achieved in some game in the past. This class aligns itself with the player_stats table in the DB
  */
 public class PlayerStat extends AbstractEntity {
-    // The player id
-    private int pid;
-    // The team that the player played for during this game
-    private int tid;
-    // The specific game id
-    private int gid;
 
     PlayerStat(int pid, int tid, int gid) throws SQLException {
-        super(League.getInstance().getNextUniqueKey(),
-                String.format("Player %d Stats playing for Team %d in Game %d", pid, tid, gid),
-                "pid,tid,gid", "player_stats");
-        this.pid = pid;
-        this.gid = gid;
-        this.tid = tid;
+        super(createIDMap(EntityType.PLAYER_STAT, pid, tid, gid),
+                String.format("Player %d Stats playing for Team %d in Game %d", pid, tid, gid), "player_stats");
+
     }
 
-    public int getGid() {
-        return gid;
-    }
-
-    public int getPid() {
-        return pid;
-    }
-
-    public int getTid() {
-        return tid;
-    }
 
     @Override
-    public void createEntityInDatabase(int id, String name) {
-        DatabaseConnection.getInstance().executeSQL(
-                "INSERT INTO " + tableName + "(" + idName + ") VALUES (" + pid + "," + tid + "," + gid + ")"
-        );
+    public void createEntityInDatabase() {
+        String sql = "INSERT INTO " + tableName + "(pid,tid,gid,name) VALUES(?,?,?,?)";
+        PreparedStatement statement = DatabaseConnection.getInstance().getBlankPreparedStatement(sql);
+        try {
+            statement.setInt(1, getIDS().get("pid"));
+            statement.setInt(2, getIDS().get("tid"));
+            statement.setInt(3, getIDS().get("gid"));
+            statement.setString(4, getName());
+            statement.execute();
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+    }
+
+
+    @Override
+    public void updateEntityAttribute(String attribute, Object value) {
+        DatabaseConnection.getInstance().
+                executeSQL("UPDATE " + tableName + " SET " + attribute + "=" + value + " WHERE tid=" + getIDS().get("tid")
+                        + " AND gid=" + getIDS().get("gid") + " AND pid=" + getIDS().get("pid"));
     }
 
     @Override
@@ -58,8 +55,8 @@ public class PlayerStat extends AbstractEntity {
 
     @Override
     public boolean entityExistsInDatabase() throws SQLException {
-        String sql = "SELECT EXISTS(SELECT 1 FROM " + tableName + " WHERE " + pid + "=" + pid +
-                ",tid=" + tid + ",gid=" + gid + ");";
+        String sql = "SELECT EXISTS(SELECT 1 FROM " + tableName + " WHERE pid=" + getIDS().get("pid") +
+                " AND tid=" + getIDS().get("tid") + " AND gid=" + getIDS().get("gid") + ");";
         ResultSet rs = DatabaseConnection.getInstance().executeQuery(sql);
         if (rs == null)
             return false;

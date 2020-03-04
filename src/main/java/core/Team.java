@@ -40,7 +40,7 @@ public class Team extends AbstractEntity {
     private List<TeamStat> teamStats = new LinkedList<>();
 
     public Team(int id, String name) throws SQLException {
-        super(id, name, "tid", "teams");
+        super(createIDMap(EntityType.TEAM, id), name, "teams");
         ResultSet statEntries = DatabaseConnection.getInstance().getStatEntriesForTeam(id);
         while (statEntries.next())
             teamStats.add(new TeamStat(statEntries.getInt("tid"), statEntries.getInt("gid")));
@@ -126,7 +126,7 @@ public class Team extends AbstractEntity {
         Map<String, Object> attributes = new LinkedHashMap<>();
         for (String attr : getAttributeNames()) {
             ResultSet resultSet = DatabaseConnection.getInstance().executeQuery("SELECT " +
-                    attr + " from " + tableName + " WHERE " + idName + "=" + getID());
+                    attr + " from " + tableName + " WHERE " + createEntityIDString());
             try {
                 if (!Team.NON_GAME_RELATED_ATTRS.contains(TeamAttributes.valueOf(attr))) {
                     attributes.put(attr, resultSet.getObject(attr));
@@ -231,7 +231,7 @@ public class Team extends AbstractEntity {
 
     public TeamStat getTeamStat(int gid) {
         for (TeamStat stat : getTeamStats())
-            if (stat.getGid() == gid)
+            if (stat.getIDS().get("gid") == gid)
                 return stat;
         return null;
     }

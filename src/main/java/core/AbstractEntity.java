@@ -15,6 +15,7 @@ import utilities.Utils;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -33,18 +34,16 @@ import java.util.Map;
 public class AbstractEntity implements Entity {
 
     String tableName;
-    String idName;
     private String entityName;
-    private int id;
+    private Map<String, Integer> ids;
     private ObservableMap<String, Object> entityAttributes;
 
-    AbstractEntity(int id, String name, String idName, String tableName) throws SQLException {
-        this.id = id;
+    AbstractEntity(Map<String, Integer> ids, String name, String tableName) throws SQLException {
+        this.ids = ids;
         this.entityName = name;
-        this.idName = idName;
         this.tableName = tableName;
         if (!entityExistsInDatabase()) {
-            createEntityInDatabase(id, name);
+            createEntityInDatabase();
             entityAttributes = FXCollections.synchronizedObservableMap(FXCollections.observableHashMap());
             entityAttributes.addListener((MapChangeListener<String, Object>) change -> {
                 if (change.wasAdded())
@@ -58,9 +57,36 @@ public class AbstractEntity implements Entity {
         }
     }
 
+    public static Map<String, Integer> createIDMap(EntityType type, Integer... args) {
+        Map<String, Integer> ids = new LinkedHashMap<>();
+        if (type == EntityType.PLAYER) {
+            assert args.length == 1;
+            ids.put("pid", args[0]);
+        } else if (type == EntityType.TEAM) {
+            assert args.length == 1;
+            ids.put("tid", args[0]);
+        } else if (type == EntityType.LEAGUE) {
+            assert args.length == 1;
+            ids.put("lid", args[0]);
+        } else if (type == EntityType.GAME_SIMULATION) {
+            assert args.length == 1;
+            ids.put("gid", args[0]);
+        } else if (type == EntityType.PLAYER_STAT) {
+            assert args.length == 3;
+            ids.put("pid", args[0]);
+            ids.put("tid", args[1]);
+            ids.put("gid", args[2]);
+        } else if (type == EntityType.TEAM_STAT) {
+            assert args.length == 2;
+            ids.put("tid", args[0]);
+            ids.put("gid", args[1]);
+        }
+        return ids;
+    }
+
     @Override
     public boolean entityExistsInDatabase() throws SQLException {
-        String sql = "SELECT EXISTS(SELECT 1 FROM " + tableName + " WHERE " + idName + "=" + id + ");";
+        String sql = "SELECT EXISTS(SELECT 1 FROM " + tableName + " WHERE " + createEntityIDString() + ");";
         ResultSet rs = DatabaseConnection.getInstance().executeQuery(sql);
         if (rs == null)
             return false;
@@ -81,7 +107,6 @@ public class AbstractEntity implements Entity {
             return ((Player) this).getAvgValueOfPlayerStat(PlayerStatTypes.valueOf(stat));
     }
 
-
     /**
      * Getters and Setters for all member variables
      */
@@ -99,12 +124,28 @@ public class AbstractEntity implements Entity {
 
     @Override
     public int getID() {
+        Iterator<Map.Entry<String, Integer>> iterator = getIDS().entrySet().iterator();
+        int id = iterator.next().getValue();
+        assert !iterator.hasNext();
         return id;
     }
 
     @Override
-    public void setID(int id) {
-        this.id = id;
+    public Map<String, Integer> getIDS() {
+        return this.ids;
+    }
+
+    @Override
+    public String createEntityIDString() {
+        Iterator<Map.Entry<String, Integer>> iterator = getIDS().entrySet().iterator();
+        StringBuilder ids = new StringBuilder();
+        while (iterator.hasNext()) {
+            Map.Entry<String, Integer> idSet = iterator.next();
+            ids.append(idSet.getKey()).append("=").append(idSet.getValue());
+            if (iterator.hasNext())
+                ids.append(",");
+        }
+        return ids.toString();
     }
 
     @Override
@@ -125,9 +166,8 @@ public class AbstractEntity implements Entity {
     @Override
     public void updateEntityAttribute(String attribute, Object value) {
         DatabaseConnection.getInstance().
-                executeSQL("UPDATE " + tableName + " SET " + attribute + "=" + value + " WHERE " + idName + "=" + getID());
+                executeSQL("UPDATE " + tableName + " SET " + attribute + "=" + value + " WHERE " + createEntityIDString());
     }
-
 
     @Override
     public Object getEntityAttribute(String attribute) {
@@ -135,14 +175,27 @@ public class AbstractEntity implements Entity {
         return getEntityAttributes().get(attribute);
     }
 
-
     @Override
-    public void createEntityInDatabase(int id, String name) {
-        String sql = "INSERT INTO " + tableName + "(" + idName + ", name) VALUES(?, ?);";
-        PreparedStatement statement = DatabaseConnection.getInstance().getBlankPreparedStatement(sql);
+    public void createEntityInDatabase() {
+        Map<String, Integer> ids = getIDS();
+        StringBuilder sql = new StringBuilder("INSERT INTO " + tableName + "(");
+        int count = 0;
+        for (String s : ids.keySet()) {
+            sql.append(s).append(",");
+            count++;
+        }
+        sql.append("name) VALUES(?,");
+        for (int i = 0; i < count; i++)
+            sql.append("?,");
+        sql.replace(sql.length() - 1, sql.length(), ")");
+        PreparedStatement statement = DatabaseConnection.getInstance().getBlankPreparedStatement(sql.toString());
         try {
-            statement.setInt(1, id);
-            statement.setString(2, name);
+            int i = 1;
+            for (int id : getIDS().values()) {
+                statement.setInt(i, id);
+                i++;
+            }
+            statement.setString(i, getName());
             statement.execute();
         } catch (SQLException e) {
             e.printStackTrace();
@@ -162,7 +215,7 @@ public class AbstractEntity implements Entity {
         Map<String, Object> attributes = new LinkedHashMap<>();
         for (String attr : getAttributeNames()) {
             ResultSet resultSet = DatabaseConnection.getInstance().executeQuery("SELECT " +
-                    attr + " from " + tableName + " WHERE " + idName + "=" + getID());
+                    attr + " from " + tableName + " WHERE " + createEntityIDString());
             try {
                 attributes.put(attr, resultSet.getObject(attr));
             } catch (SQLException e) {
@@ -214,11 +267,9 @@ public class AbstractEntity implements Entity {
         throw new RuntimeException("Unknown or Abstract Entity Type");
     }
 
-
     @Override
     public String toString() {
         return getName();
     }
-
 
 }

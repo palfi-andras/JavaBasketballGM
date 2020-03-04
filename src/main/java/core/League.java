@@ -50,7 +50,7 @@ public class League extends AbstractEntity {
 
 
     private League(int id, String name) throws SQLException {
-        super(id, name, "lid", "league");
+        super(createIDMap(EntityType.LEAGUE, id), name, "league");
 
         teams = new LinkedList<>();
         players = new LinkedList<>();
@@ -247,13 +247,20 @@ public class League extends AbstractEntity {
             for (int day = 0; day < numDays; day++) {
                 int teamIdx = day % teams.size();
                 Team nextTeam = teams.get(teamIdx);
-                addGame(new GameSimulation(team0, nextTeam, getNextUniqueKey()));
+                int gid = getNextUniqueKey();
+                team0.addTeamStat(new TeamStat(team0.getID(), gid));
+                nextTeam.addTeamStat(new TeamStat(nextTeam.getID(), gid));
+                for (Player p : team0.getRoster())
+                    p.addPlayerStat(new PlayerStat(p.getID(), team0.getID(), gid));
+                for (Player p : nextTeam.getRoster())
+                    p.addPlayerStat(new PlayerStat(p.getID(), nextTeam.getID(), gid));
+                addGame(new GameSimulation(team0, nextTeam, gid));
                 for (int idx = 1; idx < (getNumTeams() / 2); idx++) {
                     int firstTeam = (day + idx) % teams.size();
                     int secondTeam = (day + teams.size() - idx) % teams.size();
                     Team t1 = teams.get(firstTeam);
                     Team t2 = teams.get(secondTeam);
-                    int gid = getNextUniqueKey();
+                    gid = getNextUniqueKey();
                     // Initialize the stat objects for this future game
                     t1.addTeamStat(new TeamStat(t1.getID(), gid));
                     t2.addTeamStat(new TeamStat(t2.getID(), gid));
