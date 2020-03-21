@@ -1,11 +1,13 @@
-package core;
+package utilities;
 
 import attributes.LeagueAttributes;
 import attributes.PlayerAttributes;
+import core.League;
+import core.Player;
+import core.Team;
 import javafx.beans.property.ReadOnlyObjectWrapper;
 import javafx.scene.control.TableColumn;
 import javafx.scene.control.TableView;
-import utilities.Utils;
 
 import java.util.Iterator;
 import java.util.LinkedHashMap;

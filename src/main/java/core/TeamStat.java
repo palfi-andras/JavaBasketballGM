@@ -1,66 +1,78 @@
 package core;
 
-import utilities.DatabaseConnection;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
 
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
+@Entity
+@Table(name = "TeamStat")
+public class TeamStat {
 
-/**
- * MET CS 622
- *
- * @author apalfi
- * @version 1.0
- * <p>
- * The TeamStat class is an AbstractEntity that stores in its Observable Map the stats that a particular player
- * achieved in some game in the past. This class aligns itself with the player_stats table in the DB
- */
-public class TeamStat extends AbstractEntity {
+    private Long id;
+    private Integer year;
+    private GameSimulation game;
+    private Team team;
+    private GameStat gameStat;
 
-
-    TeamStat(int tid, int gid) throws SQLException {
-        super(createIDMap(EntityType.TEAM_STAT, tid, gid),
-                String.format("Team %d Stats for Game %d", tid, gid), "team_stats");
+    public TeamStat(Team team, GameSimulation game, Integer year) {
+        this.team = team;
+        this.game = game;
+        this.year = year;
+        this.gameStat = new GameStat(year);
     }
 
-    @Override
-    public void createEntityInDatabase() {
-        String sql = "INSERT INTO " + tableName + "(tid,gid,name) VALUES(?,?,?)";
-        PreparedStatement statement = DatabaseConnection.getInstance().getBlankPreparedStatement(sql);
-        try {
-            statement.setInt(1, getIDS().get("tid"));
-            statement.setInt(2, getIDS().get("gid"));
-            statement.setString(3, getName());
-            statement.execute();
-        } catch (SQLException e) {
-            e.printStackTrace();
-        }
+    @Id
+    @Column(name = "team_stat_id")
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    public Long getId() {
+        return id;
     }
 
-    @Override
-    public void updateEntityAttribute(String attribute, Object value) {
-        DatabaseConnection.getInstance().
-                executeSQL("UPDATE " + tableName + " SET " + attribute + "=" + value + " WHERE tid=" + getIDS().get("tid") + " AND gid=" + getIDS().get("gid"));
+    public void setId(Long id) {
+        this.id = id;
     }
 
-
-    /**
-     * Initialize all attributes (in this case they are PlayerStats) with zeroes. These will be changed
-     * once the game is played.
-     */
-    @Override
-    public void initializeAttributes() {
-        for (String attribute : getAttributeNames())
-            setEntityAttribute(attribute, 0);
+    @OneToOne
+    @JoinColumn(name = "game_id")
+    public GameSimulation getGame() {
+        return game;
     }
 
-    @Override
-    public boolean entityExistsInDatabase() throws SQLException {
-        String sql = "SELECT EXISTS(SELECT 1 FROM " + tableName + " WHERE tid=" + getIDS().get("tid") + " AND gid=" + getIDS().get("gid") + ");";
-        ResultSet rs = DatabaseConnection.getInstance().executeQuery(sql);
-        if (rs == null)
-            return false;
-        return rs.getInt(1) == 1;
+    public void setGame(GameSimulation game) {
+        this.game = game;
     }
 
+    @OneToOne
+    @JoinColumn(name = "team_id")
+    public Team getTeam() {
+        return team;
+    }
+
+    public void setTeam(Team team) {
+        this.team = team;
+    }
+
+    @OneToOne
+    @JoinColumn(name = "game_stat_id")
+    public GameStat getGameStat() {
+        return gameStat;
+    }
+
+    public void setGameStat(GameStat gameStat) {
+        this.gameStat = gameStat;
+    }
+
+    @Column(name = "Year")
+    public Integer getYear() {
+        return year;
+    }
+
+    public void setYear(Integer year) {
+        this.year = year;
+    }
 }

@@ -2,11 +2,8 @@ package application;
 
 import attributes.PlayerStatTypes;
 import attributes.TeamStatTypes;
-import core.Entity;
-import core.EntityType;
 import core.GameSimulation;
 import core.League;
-import core.LeagueFunctions;
 import core.Player;
 import core.Team;
 import javafx.geometry.Insets;

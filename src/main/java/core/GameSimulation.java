@@ -4,14 +4,17 @@ import attributes.GameAttributes;
 import attributes.PlayerAttributes;
 import attributes.PlayerStatTypes;
 import attributes.TeamStatTypes;
-import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream;
 import utilities.CoreConfiguration;
-import utilities.DatabaseConnection;
 import utilities.Utils;
 
-import java.io.IOException;
-import java.io.ObjectOutputStream;
-import java.sql.PreparedStatement;
+import javax.persistence.Column;
+import javax.persistence.Entity;
+import javax.persistence.GeneratedValue;
+import javax.persistence.GenerationType;
+import javax.persistence.Id;
+import javax.persistence.JoinColumn;
+import javax.persistence.OneToOne;
+import javax.persistence.Table;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -30,7 +33,9 @@ import java.util.Map;
  * @author Andras Palfi apalfi@bu.edu
  * @version 1.0
  */
-public class GameSimulation extends AbstractEntity {
+@Entity
+@Table(name = "Game")
+public class GameSimulation {
     // The amount of fouls a player can get before they foul out of the game
     private static final int FOUL_LIMIT = CoreConfiguration.getInstance().getIntProperty("simulation.foul_limit");
     // THe length in minutes of each quarter
@@ -64,13 +69,17 @@ public class GameSimulation extends AbstractEntity {
     /*
     Member variables
      */
-    private int id; // unique id for this game
+    private Long id;
+    private Team home;
+    private Team away;
+    private Integer year;
+
     private Team teamOnOffense; // used to signify which team is currently on offense
     // A map of each teams current players on court. Each team can have only 5 players on at any given time
     private Map<Team, List<Player>> playersOnCourt;
 
 
-    public GameSimulation(Team home, Team away, int gid) throws SQLException {
+    public GameSimulation(Team home, Team away) throws SQLException {
         super(createIDMap(EntityType.GAME_SIMULATION, gid), String.format("%s vs %s", home.getName(), away.getName()), "games");
         // Mark the home and away teams
         setHomeTeam(home);
@@ -84,34 +93,45 @@ public class GameSimulation extends AbstractEntity {
         setAwayPlayersOnCourt(new ArrayList<>(getAwayTeam().getRankedRoster().subList(0, 5)));
     }
 
-    @Override
-    public void initializeAttributes() {
-        setEntityAttribute(GameAttributes.GAME_CLOCK.toString(), 0);
-        setEntityAttribute(GameAttributes.HOME_TEAM.toString(), null);
-        setEntityAttribute(GameAttributes.AWAY_TEAM.toString(), null);
-        setEntityAttribute(GameAttributes.GAME_LOG.toString(), new LinkedList<>());
+    @Id
+    @Column(name = "game_id")
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    public Long getId() {
+        return id;
     }
 
-    @Override
-    public void updateEntityAttribute(String attribute, Object value) {
-        if (attribute == GameAttributes.GAME_LOG.toString()) {
-            try {
-                ByteOutputStream bos = new ByteOutputStream();
-                ObjectOutputStream oos = new ObjectOutputStream(bos);
-                byte[] bytes = bos.getBytes();
-                String sql = "UPDATE games set GAME_LOG=? where gid=?";
-                PreparedStatement statement = DatabaseConnection.getInstance().getBlankPreparedStatement(sql);
-                statement.setBytes(1, bytes);
-                statement.setInt(2, getID());
-                statement.execute();
-            } catch (IOException | SQLException e) {
-                e.printStackTrace();
-            }
-            return;
-        }
-        super.updateEntityAttribute(attribute, value);
+    public void setId(Long id) {
+        this.id = id;
     }
 
+    @OneToOne
+    @JoinColumn(name = "team_id")
+    public Team getHome() {
+        return home;
+    }
+
+    public void setHome(Team home) {
+        this.home = home;
+    }
+
+    @OneToOne
+    @JoinColumn(name = "team_id")
+    public Team getAway() {
+        return away;
+    }
+
+    public void setAway(Team away) {
+        this.away = away;
+    }
+
+    @Column(name = "Year")
+    public Integer getYear() {
+        return year;
+    }
+
+    public void setYear(Integer year) {
+        this.year = year;
+    }
 
     public List<String> getGameLog() {
         return (List<String>) getEntityAttribute(GameAttributes.GAME_LOG.toString());
@@ -1072,6 +1092,13 @@ public class GameSimulation extends AbstractEntity {
      */
     public Team simulateGame() {
         simRegulation();
+        getHomeTeamStats().updateAllAttributesBatch();
+        getAwayTeamStats().updateAllAttributesBatch();
+        for (Player p : getHomeTeam().getRoster())
+            getPlayerStats(p).updateAllAttributesBatch();
+        for (Player p : getAwayTeam().getRoster())
+            getPlayerStats(p).updateAllAttributesBatch();
+
         return getWinner();
     }
 

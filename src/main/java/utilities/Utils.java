@@ -4,10 +4,7 @@ import attributes.PlayerAttributes;
 import attributes.PlayerStatTypes;
 import attributes.TeamAttributes;
 import attributes.TeamStatTypes;
-import core.Entity;
-import core.EntityType;
 import core.GameSimulation;
-import core.LeagueFunctions;
 import core.Player;
 import core.Team;
 import javafx.beans.property.ReadOnlyObjectWrapper;
@@ -17,6 +14,10 @@ import javafx.scene.control.TableView;
 import javafx.scene.text.Font;
 import javafx.scene.text.FontWeight;
 
+import javax.persistence.Entity;
+import java.io.BufferedReader;
+import java.io.FileReader;
+import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.util.ArrayList;
@@ -39,6 +40,22 @@ import java.util.Random;
 public class Utils {
 
     private static Random random = new Random(System.currentTimeMillis());
+
+    public static List<String> getFirstRowFromCSVFile(String path) {
+        List<String> values = new LinkedList<>();
+        try {
+            BufferedReader csvReader = new BufferedReader(new FileReader(path));
+            String row;
+            while ((row = csvReader.readLine()) != null) {
+                String[] data = row.split(",");
+                values.add(data[0]);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return values;
+    }
+
 
     public static double round(double value, int places) {
         if (places < 0) throw new IllegalArgumentException();

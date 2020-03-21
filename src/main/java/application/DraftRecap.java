@@ -1,11 +1,11 @@
 package application;
 
-import core.Draft;
 import core.Team;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
+import utilities.Draft;
 import utilities.Utils;
 
 class DraftRecap extends AbstractGUI {

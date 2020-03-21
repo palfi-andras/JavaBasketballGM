@@ -1,7 +1,6 @@
 package application;
 
 
-import core.Draft;
 import core.League;
 import core.Team;
 import javafx.geometry.Insets;
@@ -15,7 +14,7 @@ import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.FlowPane;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
-import utilities.DatabaseConnection;
+import utilities.Draft;
 
 import java.sql.SQLException;
 import java.util.Optional;
